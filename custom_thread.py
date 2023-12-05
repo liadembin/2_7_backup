@@ -2,7 +2,7 @@ import threading
 import time
 import socket
 import traceback
-from client import logtcp
+#from client import logtcp
 from tcp_by_size import recv_by_size, send_with_size
 from handlers import (
     handle_chuk,
@@ -54,7 +54,7 @@ class CustomThread(threading.Thread):
         while not finish:
             try:
                 # Improve by receiving data based on message size
-                byte_data = recv_by_size(self.sock, self.tcp_debug)
+                byte_data = recv_by_size(self.sock, self.tid, self.tcp_debug)
 
                 if byte_data == b"":
                     print("Seems client disconnected")
@@ -97,7 +97,7 @@ class CustomThread(threading.Thread):
         """
 
         # logtcp("sent", bdata)
-        send_with_size(self.sock, bdata, self.tcp_debug)
+        send_with_size(self.sock, bdata, self.tid, self.tcp_debug)
 
     def dispatch_request(self, request):
         request_handlers = {

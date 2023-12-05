@@ -15,14 +15,35 @@ def decode_from_pickle_and_from_base64(base):
         return None
 
 
+def get_tree_structure(file_structure):
+    directory_structure = {}
+
+    for item in file_structure:
+        parts = item.split("\\")
+        current_dict = directory_structure
+
+        for part in parts[:-1]:
+            current_dict = current_dict.setdefault(part, {})
+
+        current_dict[parts[-1]] = None
+
+    def build_directory_structure(structure, indent=0):
+        result = ""
+        for key, value in structure.items():
+            if value is None:
+                result += "\t" * indent + key + "\n"
+            else:
+                result += "\t" * indent + key + ":\n"
+                result += build_directory_structure(value, indent + 1)
+        return result
+
+    return build_directory_structure(directory_structure)
+
+
 def handle_dir(fileds, client_args):
     all = fileds[1]  # 0 is the code
     decoded = decode_from_pickle_and_from_base64(all)
-    return "Dirs: " + str(decoded)
-
-
-def handle_screenshot(fileds, client_args):
-    return f"Server took a screenshot named {fileds[-1]} sucsessfuly"
+    return "\n Dirs: " + get_tree_structure(decoded)
 
 
 def handle_exec(fileds, client_args):

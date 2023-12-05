@@ -1,10 +1,12 @@
 # 2.6  client server October 2021
+from alive_progress import alive_bar
 import pickle
 import base64
 import socket
 import sys
 import traceback
 from tcp_by_size import recv_by_size, send_with_size
+from client_custom_exceptions import DisconnectErr,DisconnectRequest
 
 # from __ import * ruins LSP.
 from client_handlers import (
@@ -12,10 +14,18 @@ from client_handlers import (
     # handle_msg,
     handle_exec,
     # handle_file,
-    handle_screenshot,
+    # handle_screenshot,
     handle_recived_chunk,
 )
+import logging
 
+logging.basicConfig(format="%(asctime)s - %(message)s",
+                    datefmt="%d-%b-%y %H:%M:%S")
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
+logger.propagate = True
+FILE_MENU_LOCATION = "10"
 GET_CHUNK_CONST = "1001"
 USER_MENU_TO_CODE_DICT = {
     "1": "TIME",
@@ -27,18 +37,18 @@ USER_MENU_TO_CODE_DICT = {
     "7": "COPY",
     "8": "DELL",
     "9": "SCRS",
-    "10": "FILE",
+    FILE_MENU_LOCATION: "FILE",
     GET_CHUNK_CONST: "CHUK",
 }
 
 
 def handle_file(fields, client_args):
-    # print("Handle File Paramas")
-    # print(fields)
     code, chunk_amount, file_name = fields
-    for i in range(int(chunk_amount)):
-        # print(f"Chunk: {i}")
-        handle_msg(("CHUK~" + file_name).encode(), client_args)
+    with alive_bar(int(chunk_amount)) as bar:
+        for i in range(int(chunk_amount)):
+            # print(f"Chunk: {i}")
+            handle_msg(("CHUK~" + file_name).encode(), client_args)
+            bar()
         # print("Finished writing the chunk")
     handle_msg("CLOS~" + file_name, [file_name])
     return ""
@@ -49,23 +59,9 @@ def logtcp(dir, byte_data):
     log direction and all TCP byte array data
     return: void
     """
-    if dir == "sent":
-        print(f"C LOG:Sent     >>>{byte_data}")
-    else:
-        print(f"C LOG:Recieved <<<{byte_data}")
+    logger.info(
+        f'LOG:{"Sent  >>>" if dir == "sent" else "Recived  <<<"} {byte_data}')
 
-
-def send_data(sock, bdata):
-    """
-    send to client byte array data
-    will add 8 bytes message length as first field
-    e.g. from 'abcd' will send  b'00000004~abcd'
-    return: void
-    """
-    # bytearray_data = str(len(bdata)).zfill(8).encode() + b'~' + bdata
-    # sock.send(bytearray_data)
-    send_with_size(sock, bdata)
-    # logtcp("sent", bdata)
 
 
 def menu():
@@ -73,17 +69,6 @@ def menu():
     show client menu
     return: string with selection
     """
-    # print("\n  1. ask for time")
-    # print("\n  2. ask for random")
-    # print("\n  3. ask for name")
-    # print("\n  4. notify exit")
-    # print("\n  5. request DIR")
-    # print("\n  6. execute a program")
-    # print("\n  7. copy a file on the remote pc")
-    # print("\n  8. delete a file")
-    # print("\n  9. screen shot")
-    # print("\n  10. fetch a file")
-    # print('\n  (5. some invalid data for testing)')
     options = [
         "ask for time",
         "ask for random",
@@ -97,7 +82,6 @@ def menu():
         "fetch a file",
     ]
 
-    # Print the options
     for index, option in enumerate(options, start=1):
         print(f"\n  {index}. {option}")
 
@@ -108,30 +92,21 @@ def menu():
     # CLIENT_ENTER_PARAM = "Client " + ENTER_PARAM
     count_args = {
         "5": [
-            [1, [
-                "Any Sub directory? (. for current, ../ OR ./ works. may also specify dir name like: .git )"]], [0, []]
+            [
+                1,
+                [
+                    "Any Sub directory? (. for current, ../ OR ./ works. may also specify dir name like: .git )"
+                ],
+            ],
+            [0, []],
         ],
-        "6": [
-            [1, ["Program name / path to the .exe "]], [0, []]
-        ],
-        "7": [
-            [2, ["File to copy", "New file name to copy to"]], [0, []]
-        ],
-        "8": [
-            [1, ["File name to delete"]], [0, []]
-        ],
-        "10": [
-            [1, ["Remote file name"]], [1, ["local file name"]]
-        ],
+        "6": [[1, ["Program name / path to the .exe "]], [0, []]],
+        "7": [[2, ["File to copy", "New file name to copy to"]], [0, []]],
+        "8": [[1, ["File name to delete"]], [0, []]],
+        "10": [[1, ["Remote file name"]], [1, ["local file name"]]],
     }
     row = count_args.get(request, [[0, [""]], [0, [""]]])
-    # server_row = row[0]
-    # for i in range(server_row[0]):
-    #     server_args.append(input(server_row[1]))
-    # client_row = row[1]
-    # for i in range(client_row[0]):
-    #     client_args.append(input(client_row[1]))
-    #
+
     for i, req_row in enumerate(row):
         for j in range(req_row[0]):
             (server_args if i == 0 else client_args).append(
@@ -150,6 +125,15 @@ def protocol_build_request(from_user):
         + "~".join(from_user[1])
     )
     return ret_str
+
+
+def handle_screenshot(fileds, client_args):
+    handle_msg(
+        protocol_build_request(
+            [FILE_MENU_LOCATION, ["./srcshot/" + fileds[-1]]]),
+        [input(" What name to give the screenshot? ")],
+    )
+    return f"Server took a screenshot named {fileds[-1]} sucsessfuly"
 
 
 def protocol_parse_reply(reply, client_args):
@@ -176,6 +160,7 @@ def protocol_parse_reply(reply, client_args):
         }
         if code in special_handlers.keys():
             return special_handlers[code](fields, client_args)
+
         to_show_dict = {
             "TIMR": "The Server time is: ",
             "RNDR": "Server draw the number: ",
@@ -211,26 +196,20 @@ def handle_reply(reply, client_args):
         print(f"  SERVER Reply: {to_show}   |")
         print("==========================================================")
 
-
-class DisconnectRequest(Exception):
-    pass
-
-
-class DisconnectErr(Exception):
-    pass
-
-
 def handle_msg(to_send, client_args):
     global sock
-    send_data(sock, to_send)  # .encode())
+    #send_data(sock, to_send)  # .encode())
+    #send_with_size(sock,to_send,"",True)
+    send_with_size(sock,to_send)
     # todo improve it to recv by message size
-    byte_data = recv_by_size(sock)
+    #byte_data = recv_by_size(sock,"",True)
+    byte_data = recv_by_size(sock, "", False)
     if byte_data == b"":
         print("Seems server disconnected abnormal")
         raise DisconnectRequest("Server dissconnected ")
     # logtcp("recv", byte_data)
     # byte_data = byte_data[9:]  # remove length field
-    print(f"Calling handle_reply with: {client_args}")
+    # print(f"Calling handle_reply with: {client_args}")
     handle_reply(byte_data, client_args)
 
 

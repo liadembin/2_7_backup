@@ -30,21 +30,21 @@ def recv_by_size(sock, tid="", TCP_DEBUG=False):
                 break
             data += _d
 
-    if not (TCP_DEBUG and size_header != b""):
-        return data if len(data) == data_len else b""
+    if TCP_DEBUG and size_header != b"":
         # print("\nRecv(%s)>>>" % (size_header,), end="")
         # print("%s" % (data[: min(len(data), LEN_TO_PRINT)],))
         # print("ERR becuse: ", data[: min(len(data), LEN_TO_PRINT)])
-    if tid == "" or tid == -1:
-        logger.info(
-            f"- {tid} - Recived({size_header}) >>> {data[:min(LEN_TO_PRINT,len(data))]}"
-        )
-    else:
-        logger.info(
-            f"Recived({size_header}) >>> {data[:min(LEN_TO_PRINT,len(data))]}"
-        )
-    return data if len(data) == data_len else b""
-
+        if tid == "" or tid == -1:
+            logger.info(
+                f"- {tid} - Recived({size_header}) >>> {data[:min(LEN_TO_PRINT,len(data))]}"
+            )
+        else:
+            logger.info(
+                f"Recived({size_header}) >>> {data[:min(LEN_TO_PRINT,len(data))]}"
+            )
+    if data_len != len(data):
+        data = b""  # Partial data is like no data !
+    return data
 
 
 def send_with_size(sock, bdata, tid="", TCP_DEBUG=False):
@@ -56,15 +56,13 @@ def send_with_size(sock, bdata, tid="", TCP_DEBUG=False):
     bytea = bytearray(header_data, encoding="utf8") + bdata
 
     sock.send(bytea)
-    if not (TCP_DEBUG and len_data > 0):
-        return 
-    
-    if tid != "" or tid == -1:
-        logger.info(
+    if TCP_DEBUG and len_data > 0:
+        if tid != "" or tid == -1:
+            logger.info(
                 f"- tid: {tid} -  Sent({len_data})>>> {bytea[:min(len(bytea),LEN_TO_PRINT)]}"
-        )
-    else:
-        logger.info(f"  Sent({len_data})>>> {bytea[:min(len(bytea),LEN_TO_PRINT)]}")
+            )
+        else:
+            logger.info(f"  Sent({len_data})>>> {bytea[:min(len(bytea),LEN_TO_PRINT)]}")
         # logger.info("\nSent(%s)>>> %s" % (len_data, bytea[: min(len(bytea), LEN_TO_PRINT)]).decode(), extra={
         #     'tid': str(thread_id)})        # print("\nSent(%s)>>>" % (len_data,), end="")
         # print("Sent")

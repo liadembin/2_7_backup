@@ -34,7 +34,7 @@ def main():
     while True:
         print("\nMain thread: before accepting ...")
         cli_sock, addr = srv_sock.accept()
-        t = CustomThread(cli_sock, addr, tid, False)
+        t = CustomThread(cli_sock, addr, tid, True)
         t.start()
         tid += 1
         break  # for testing, i use just one client for basic tests

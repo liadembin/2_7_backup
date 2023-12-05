@@ -118,7 +118,7 @@ def handle_screenshot(args: str) -> HANDLE_TYPE:
         )
     try:
         print(f"Saving {filename =}")
-        pyautogui.screenshot("./scrshot/" + filename)
+        pyautogui.screenshot("./srcshot/" + filename)
         return "SCTR~" + filename, True
     except Exception as e:
         print(e)
