@@ -1,4 +1,5 @@
 # 2.6  client server October 2021
+from typing import List, Tuple
 from alive_progress import alive_bar
 import pickle
 import base64
@@ -6,21 +7,17 @@ import socket
 import sys
 import traceback
 from tcp_by_size import recv_by_size, send_with_size
-from client_custom_exceptions import DisconnectErr,DisconnectRequest
+from client_custom_exceptions import DisconnectErr, DisconnectRequest
 
 # from __ import * ruins LSP.
 from client_handlers import (
     handle_dir,
-    # handle_msg,
     handle_exec,
-    # handle_file,
-    # handle_screenshot,
     handle_recived_chunk,
 )
 import logging
 
-logging.basicConfig(format="%(asctime)s - %(message)s",
-                    datefmt="%d-%b-%y %H:%M:%S")
+logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
@@ -44,7 +41,7 @@ USER_MENU_TO_CODE_DICT = {
 
 def handle_file(fields, client_args):
     code, chunk_amount, file_name = fields
-    with alive_bar(int(chunk_amount)) as bar:
+    with alive_bar(int(chunk_amount), bar="blocks", spinner="wait") as bar:
         for i in range(int(chunk_amount)):
             # print(f"Chunk: {i}")
             handle_msg(("CHUK~" + file_name).encode(), client_args)
@@ -54,20 +51,10 @@ def handle_file(fields, client_args):
     return ""
 
 
-def logtcp(dir, byte_data):
+def menu() -> Tuple[str, List[str], List[str]]:
     """
-    log direction and all TCP byte array data
-    return: void
-    """
-    logger.info(
-        f'LOG:{"Sent  >>>" if dir == "sent" else "Recived  <<<"} {byte_data}')
-
-
-
-def menu():
-    """
-    show client menu
-    return: string with selection
+    show client menu and retrive the params they provided, both that need to go to server and to the client
+    return: string with selection, arguments for the server and for the client both string arrays
     """
     options = [
         "ask for time",
@@ -88,8 +75,7 @@ def menu():
     server_args = []
     client_args = []
     request = input(f"Input 1 - {len(options)} > ")
-    # ENTER_PARAM = "Insert Another Param "
-    # CLIENT_ENTER_PARAM = "Client " + ENTER_PARAM
+
     count_args = {
         "5": [
             [
@@ -109,8 +95,7 @@ def menu():
 
     for i, req_row in enumerate(row):
         for j in range(req_row[0]):
-            (server_args if i == 0 else client_args).append(
-                input(req_row[1][j] + " "))
+            (server_args if i == 0 else client_args).append(input(req_row[1][j] + " "))
     return request, server_args, client_args
 
 
@@ -129,8 +114,7 @@ def protocol_build_request(from_user):
 
 def handle_screenshot(fileds, client_args):
     handle_msg(
-        protocol_build_request(
-            [FILE_MENU_LOCATION, ["./srcshot/" + fileds[-1]]]),
+        protocol_build_request([FILE_MENU_LOCATION, ["./srcshot/" + fileds[-1]]]),
         [input(" What name to give the screenshot? ")],
     )
     return f"Server took a screenshot named {fileds[-1]} sucsessfuly"
@@ -196,24 +180,20 @@ def handle_reply(reply, client_args):
         print(f"  SERVER Reply: {to_show}   |")
         print("==========================================================")
 
+
 def handle_msg(to_send, client_args):
     global sock
-    #send_data(sock, to_send)  # .encode())
-    #send_with_size(sock,to_send,"",True)
-    send_with_size(sock,to_send)
-    # todo improve it to recv by message size
-    #byte_data = recv_by_size(sock,"",True)
+    # send_with_size(sock,to_send,"",True)
+    send_with_size(sock, to_send)
     byte_data = recv_by_size(sock, "", False)
     if byte_data == b"":
         print("Seems server disconnected abnormal")
         raise DisconnectRequest("Server dissconnected ")
-    # logtcp("recv", byte_data)
-    # byte_data = byte_data[9:]  # remove length field
-    # print(f"Calling handle_reply with: {client_args}")
+
     handle_reply(byte_data, client_args)
 
 
-def main(ip):
+def main(ip: str) -> None:
     """
     main client - handle socket and main loop
     """
@@ -226,8 +206,7 @@ def main(ip):
         print(f"Connect succeeded {ip}:{port}")
         connected = True
     except Exception:
-        print(
-            f"Error while trying to connect.  Check ip or port -- {ip}:{port}")
+        print(f"Error while trying to connect.  Check ip or port -- {ip}:{port}")
 
     while connected:
         from_user = menu()
