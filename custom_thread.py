@@ -2,6 +2,7 @@ import threading
 import time
 import socket
 import traceback
+from client import logtcp
 from tcp_by_size import recv_by_size, send_with_size
 from handlers import (
     handle_chuk,
@@ -22,35 +23,14 @@ from handlers import (
 # using from import * ruins the LSP(auto complete.)
 
 
-def check_length(message):
-    """
-    check message length
-    return: string - error message
-    """
-    size = len(message)
-    if size < 13:  # 13 is min message size
-        return b"ERRR~003~Bad Format message too short"
-    if int(message[:8].decode()) != size - 9:
-        return b"ERRR~003~Bad Format, incorrect message length"
-    return b""
-
-
-def protocol_build_reply(request):
-    """
-    Application Business Logic
-    function despatcher ! for each code will get to some function that handle specific request
-    Handle client request and prepare the reply info
-    string:return: reply
-    """
-
-
 class CustomThread(threading.Thread):
-    def __init__(self, cli_sock, addr, tid):
+    def __init__(self, cli_sock, addr, tid, tcp_debug=False):
         super(CustomThread, self).__init__()
         self.sock = cli_sock
         self.addr = addr
         self.tid = tid
         self.open_files = {}
+        self.tcp_debug = tcp_debug
 
     def handle_request(self, request):
         """
@@ -62,7 +42,7 @@ class CustomThread(threading.Thread):
             to_send = self.dispatch_request(request)
             if request_code == b"EXIT":
                 return to_send, True
-        except Exception as err:
+        except Exception:
             print(traceback.format_exc())
             to_send = b"ERRR~001~General error"
         return to_send, False
@@ -74,13 +54,13 @@ class CustomThread(threading.Thread):
         while not finish:
             try:
                 # Improve by receiving data based on message size
-                byte_data = recv_by_size(self.sock)
+                byte_data = recv_by_size(self.sock, self.tcp_debug)
 
                 if byte_data == b"":
                     print("Seems client disconnected")
                     break
 
-                self.logtcp("recv", byte_data)
+                # self.logtcp("recv", byte_data)
                 data_to_send, did_err = self.handle_request(byte_data)
                 # if to_send:
                 self.send_data(data_to_send)
@@ -115,13 +95,9 @@ class CustomThread(threading.Thread):
         e.g. from 'abcd' will send  b'00000004~abcd'
         return: void
         """
-        # bytearray_data = str(len(bdata)).zfill(8).encode() + b'~' + bdata
-        # self.sock.send(bytearray_data)
-        # self.logtcp('sent', bytearray_data)
-        # print("")
-        print("Sending back to the client the following data: ")
-        print(bdata)
-        send_with_size(self.sock, bdata)
+
+        # logtcp("sent", bdata)
+        send_with_size(self.sock, bdata, self.tcp_debug)
 
     def dispatch_request(self, request):
         request_handlers = {
@@ -143,11 +119,10 @@ class CustomThread(threading.Thread):
         handler = request_handlers.get(request_code, handle_error)
         # the function return norma, strings but this is more general
         if request_code == "CHUK" or request_code == "FILE" or request_code == "CLOS":
-            response = handler(request[5:], self)
+            response = handler(request[5:].decode(), self)
         else:
-            response = handler(request[5:])  # 5 not 4 because of ~
-        print("Response")
-        print(response)
+            response = handler(request[5:].decode())  # 5 not 4 because of ~
+
         if response[1]:
             res = response[0]
             return res.encode()

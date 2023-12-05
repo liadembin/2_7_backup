@@ -6,6 +6,16 @@ import sys
 import traceback
 from tcp_by_size import recv_by_size, send_with_size
 
+# from __ import * ruins LSP.
+from client_handlers import (
+    handle_dir,
+    # handle_msg,
+    handle_exec,
+    # handle_file,
+    handle_screenshot,
+    handle_recived_chunk,
+)
+
 GET_CHUNK_CONST = "1001"
 USER_MENU_TO_CODE_DICT = {
     "1": "TIME",
@@ -20,6 +30,18 @@ USER_MENU_TO_CODE_DICT = {
     "10": "FILE",
     GET_CHUNK_CONST: "CHUK",
 }
+
+
+def handle_file(fields, client_args):
+    # print("Handle File Paramas")
+    # print(fields)
+    code, chunk_amount, file_name = fields
+    for i in range(int(chunk_amount)):
+        # print(f"Chunk: {i}")
+        handle_msg(("CHUK~" + file_name).encode(), client_args)
+        # print("Finished writing the chunk")
+    handle_msg("CLOS~" + file_name, [file_name])
+    return ""
 
 
 def logtcp(dir, byte_data):
@@ -43,7 +65,7 @@ def send_data(sock, bdata):
     # bytearray_data = str(len(bdata)).zfill(8).encode() + b'~' + bdata
     # sock.send(bytearray_data)
     send_with_size(sock, bdata)
-    logtcp("sent", bdata)
+    # logtcp("sent", bdata)
 
 
 def menu():
@@ -51,23 +73,70 @@ def menu():
     show client menu
     return: string with selection
     """
-    print("\n  1. ask for time")
-    print("\n  2. ask for random")
-    print("\n  3. ask for name")
-    print("\n  4. notify exit")
-    print("\n  5. request DIR")
-    print("\n  6. execute a program")
-    print("\n  7. copy a file on the remote pc")
-    print("\n  8. delete a file")
-    print("\n  9. screen shot")
-    print("\n  10. fetch a file")
+    # print("\n  1. ask for time")
+    # print("\n  2. ask for random")
+    # print("\n  3. ask for name")
+    # print("\n  4. notify exit")
+    # print("\n  5. request DIR")
+    # print("\n  6. execute a program")
+    # print("\n  7. copy a file on the remote pc")
+    # print("\n  8. delete a file")
+    # print("\n  9. screen shot")
+    # print("\n  10. fetch a file")
     # print('\n  (5. some invalid data for testing)')
-    args = []
-    request = input("Input 1 - 4 > ")
-    count_args = {"5": 1, "6": 1, "7": 2, "8": 1, "10": 1}
-    for i in range(count_args.get(request, 0)):
-        args.append(input("Insert Another paramater"))
-    return request, args
+    options = [
+        "ask for time",
+        "ask for random",
+        "ask for name",
+        "notify exit",
+        "request DIR",
+        "execute a program",
+        "copy a file on the remote pc",
+        "delete a file",
+        "screen shot",
+        "fetch a file",
+    ]
+
+    # Print the options
+    for index, option in enumerate(options, start=1):
+        print(f"\n  {index}. {option}")
+
+    server_args = []
+    client_args = []
+    request = input(f"Input 1 - {len(options)} > ")
+    # ENTER_PARAM = "Insert Another Param "
+    # CLIENT_ENTER_PARAM = "Client " + ENTER_PARAM
+    count_args = {
+        "5": [
+            [1, [
+                "Any Sub directory? (. for current, ../ OR ./ works. may also specify dir name like: .git )"]], [0, []]
+        ],
+        "6": [
+            [1, ["Program name / path to the .exe "]], [0, []]
+        ],
+        "7": [
+            [2, ["File to copy", "New file name to copy to"]], [0, []]
+        ],
+        "8": [
+            [1, ["File name to delete"]], [0, []]
+        ],
+        "10": [
+            [1, ["Remote file name"]], [1, ["local file name"]]
+        ],
+    }
+    row = count_args.get(request, [[0, [""]], [0, [""]]])
+    # server_row = row[0]
+    # for i in range(server_row[0]):
+    #     server_args.append(input(server_row[1]))
+    # client_row = row[1]
+    # for i in range(client_row[0]):
+    #     client_args.append(input(client_row[1]))
+    #
+    for i, req_row in enumerate(row):
+        for j in range(req_row[0]):
+            (server_args if i == 0 else client_args).append(
+                input(req_row[1][j] + " "))
+    return request, server_args, client_args
 
 
 def protocol_build_request(from_user):
@@ -75,103 +144,19 @@ def protocol_build_request(from_user):
     build the request according to user selection and protocol
     return: string - msg code
     """
-    # if from_user == '1':
-    #     return 'TIME'
-    # elif from_user == '2':
-    #     return 'RAND'
-    # elif from_user == '3':
-    #     return 'WHOU'
-    # elif from_user == '4':
-    #     return 'EXIT'
-    # #elif from_user == '5':
-    # #    return input("enter free text data to send> ")
-    # else:
-    #     return ''
-    #
-    # from users is a tuple
-    # index 0 is the CODE
-    # index 1 is args
-    print("The Args: ")
-    print(from_user[1])
     ret_str = (
         USER_MENU_TO_CODE_DICT.get(from_user[0], "")
         + ("~" if len(from_user[1]) > 0 else "")
         + "~".join(from_user[1])
     )
-    print(ret_str)
     return ret_str
 
 
-def decode_from_pickle_and_from_base64(base):
-    try:
-        # Decode Base64 to get pickled data
-        bytearr = base64.b64decode(base)
-        # Deserialize the pickled data
-        data = pickle.loads(bytearr)
-        return data
-    except Exception as e:
-        print(f"Error2: {e}")
-        return None
-
-
-def handle_dir(fileds):
-    all = fileds[1]  # 0 is the code
-    decoded = decode_from_pickle_and_from_base64(all)
-    return "Dirs: " + str(decoded)
-
-
-def handle_screenshot(fileds):
-    return f"Server took a screenshot named {fileds[-1]} sucsessfuly"
-
-
-def handle_exec(fileds):
-    code, ret_code, stdin, sterr = fileds
-    return f"""return code: {ret_code} \n 
-                stdout: {stdin} \n 
-                stderr: {sterr}
-"""
-
-
-def get_file(file_name):
-    print(f"Fetching: {file_name = } from the server")
-
-
-def handle_file(fields):
-    print("Handle File Paramas")
-    print(fields)
-    code, chunk_amount, file_name = fields
-    for i in range(int(chunk_amount)):
-        print(f"Chunk: {i}")
-        handle_msg(("CHUK~" + file_name).encode())
-        print("Finished writing the chunk")
-    handle_msg("CLOS~" + file_name)
-    return (
-        "Server Says it will take: "
-        + chunk_amount
-        + " Chunks "
-        + " To Fetch "
-        + file_name
-    )
-
-
-def handle_recived_chunk(fields):
-    print("Chur params: ")
-    print(fields)
-    code, remote_file_name, b64content = fields
-    decoded_to_bin = base64.b64decode(b64content)
-    out_filename = input("Enter the filename to save here ")
-    with open(out_filename, "ab+") as f:
-        f.write(decoded_to_bin)
-    return ""
-
-
-def protocol_parse_reply(reply):
+def protocol_parse_reply(reply, client_args):
     """
     parse the server reply and prepare it to user
     return: answer from server string
     """
-    print("Full response from server: ")
-    print(reply)
     to_show = "Invalid reply from server"
     try:
         reply = reply.decode()
@@ -180,9 +165,8 @@ def protocol_parse_reply(reply):
             fields = reply.split("~")
 
         code = reply[:4]
-        print("The Server send the code: " + code)
         if code == "EXTR":
-            raise DisconnectRequest("dissconnect request")
+            raise DisconnectRequest("disconnect request")
         special_handlers = {
             "DIRR": handle_dir,
             "SCTR": handle_screenshot,
@@ -191,7 +175,7 @@ def protocol_parse_reply(reply):
             "CHUR": handle_recived_chunk,
         }
         if code in special_handlers.keys():
-            return special_handlers[code](fields)
+            return special_handlers[code](fields, client_args)
         to_show_dict = {
             "TIMR": "The Server time is: ",
             "RNDR": "Server draw the number: ",
@@ -201,8 +185,7 @@ def protocol_parse_reply(reply):
             "EXER": "Server Execution returrned: ",
             "SCTE": "Server screen shot err:",
             "COPR": " Server copied good",
-            "OKAY": ""  # file handle closed alright left empty to not print
-            # "FILR": "Server Says it will take  this much chunks: "
+            "OKAY": "",
         }
 
         to_show = to_show_dict.get(code, "Server sent an unknown code")
@@ -211,20 +194,18 @@ def protocol_parse_reply(reply):
     except DisconnectRequest as e:
         raise e
     except Exception as e:
-        # print('Server replay bad format')
-        print("Error")
+        print("Error when parsing the reply")
         raise e
     return to_show
 
 
-def handle_reply(reply):
+def handle_reply(reply, client_args):
     """
     get the tcp upcoming message and show reply information
     return: void
     """
-    to_show = protocol_parse_reply(reply)
-    # if to_show:
-    #     raise DisconnectRequest("Requested Dissconnect")
+    to_show = protocol_parse_reply(reply, client_args)
+
     if to_show != "":
         print("\n==========================================================")
         print(f"  SERVER Reply: {to_show}   |")
@@ -239,10 +220,7 @@ class DisconnectErr(Exception):
     pass
 
 
-connected = True  # gross solution dont have time to rewrite, future me problem
-
-
-def handle_msg(to_send):
+def handle_msg(to_send, client_args):
     global sock
     send_data(sock, to_send)  # .encode())
     # todo improve it to recv by message size
@@ -250,9 +228,10 @@ def handle_msg(to_send):
     if byte_data == b"":
         print("Seems server disconnected abnormal")
         raise DisconnectRequest("Server dissconnected ")
-    logtcp("recv", byte_data)
+    # logtcp("recv", byte_data)
     # byte_data = byte_data[9:]  # remove length field
-    handle_reply(byte_data)
+    print(f"Calling handle_reply with: {client_args}")
+    handle_reply(byte_data, client_args)
 
 
 def main(ip):
@@ -273,19 +252,19 @@ def main(ip):
 
     while connected:
         from_user = menu()
-        to_send = protocol_build_request(from_user)
+        client_args = from_user[-1]
+        to_send = protocol_build_request(from_user[:2])
         if to_send == "":
             print("Selection error try again")
             continue
         try:
-            handle_msg(to_send)
+            handle_msg(to_send, client_args)
         except DisconnectRequest as e:
-            print("Dissconnecting, i realy need to find a better way to handle")
+            # need to find a cleaner way to do this
             break
         except socket.error as err:
             print(f"Got socket error: {err}")
             break
-
         except Exception as err:
             print(f"General error: {err}")
             print(traceback.format_exc())

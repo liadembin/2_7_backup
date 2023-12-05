@@ -1,10 +1,9 @@
 SIZE_HEADER_FORMAT = "000000000|"  # n digits for data size + one delimiter
 size_header_size = len(SIZE_HEADER_FORMAT)
-TCP_DEBUG = True
 LEN_TO_PRINT = 100
 
 
-def recv_by_size(sock):
+def recv_by_size(sock, TCP_DEBUG=False):
     size_header = b""
     data_len = 0
     while len(size_header) < size_header_size:
@@ -31,7 +30,7 @@ def recv_by_size(sock):
     return data
 
 
-def send_with_size(sock, bdata):
+def send_with_size(sock, bdata, TCP_DEBUG=False):
     if type(bdata) == str:
         bdata = bdata.encode()
     len_data = len(bdata)

@@ -8,7 +8,6 @@ import socket
 # import datetime
 from custom_thread import CustomThread
 
-
 IP, PORT = ("127.0.0.1", 7777)
 
 
@@ -35,7 +34,7 @@ def main():
     while True:
         print("\nMain thread: before accepting ...")
         cli_sock, addr = srv_sock.accept()
-        t = CustomThread(cli_sock, addr, tid)
+        t = CustomThread(cli_sock, addr, tid, False)
         t.start()
         tid += 1
         break  # for testing, i use just one client for basic tests

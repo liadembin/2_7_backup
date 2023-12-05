@@ -12,29 +12,29 @@ import base64
 HANDLE_TYPE = Tuple[(str | bytearray), bool]
 
 
-def handle_error(args: bytearray):
+def handle_error(args: str):
     return "ERRR~002~code not supported", True
 
 
-def handle_time(args: bytearray) -> HANDLE_TYPE:
+def handle_time(args: str) -> HANDLE_TYPE:
     return "TIMR~" + datetime.datetime.now().strftime("%H:%M:%S:%f"), True
 
 
-def handle_random(args: bytearray) -> HANDLE_TYPE:
+def handle_random(args: str) -> HANDLE_TYPE:
     return "RNDR~" + str(random.randint(1, 10)), True
 
 
-def handle_who(args: bytearray) -> HANDLE_TYPE:
+def handle_who(args: str) -> HANDLE_TYPE:
     return "WHOR~" + os.environ["COMPUTERNAME"], True
 
 
-def handle_exit(args: bytearray) -> HANDLE_TYPE:
+def handle_exit(args: str) -> HANDLE_TYPE:
     return "EXTR", True
 
 
-def handle_exec(args: bytearray) -> HANDLE_TYPE:
+def handle_exec(args: str) -> HANDLE_TYPE:
     try:
-        args_str = args.decode().replace("~", "").replace("'", "")
+        args_str = args.replace("~", "").replace("'", "")
         print("Args for subprocces: ", args_str)
         # , shell=True, check=True,
         res = subprocess.run(args_str, capture_output=True, text=True)
@@ -75,14 +75,13 @@ def base64_from_pickle(bytearr):
         return None
 
 
-def handle_dir(args: bytearray) -> HANDLE_TYPE:
+def handle_dir(args: str) -> HANDLE_TYPE:
     # params = args.split("~")[1:]
-    data = traverse()  # params[0])
-
+    data = traverse(args)  # params[0])
     return "DIRR~" + base64_from_pickle(pickle.dumps(data)), False
 
 
-def handle_del(args: bytearray) -> HANDLE_TYPE:
+def handle_del(args: str) -> HANDLE_TYPE:
     print("Del Args: ", args)
     try:
         os.remove(args)
@@ -100,9 +99,9 @@ def handle_del(args: bytearray) -> HANDLE_TYPE:
     # pass
 
 
-def handle_copy(args: bytearray) -> HANDLE_TYPE:
+def handle_copy(args: str) -> HANDLE_TYPE:
     print("Copying files: ")
-    args_stringifyed = args.decode()
+    args_stringifyed = args
     print("Args: ", args)
     src, dest = args_stringifyed.split("~")
     print(f"{src = } { dest =}")
@@ -111,8 +110,8 @@ def handle_copy(args: bytearray) -> HANDLE_TYPE:
     # pass
 
 
-def handle_screenshot(args: bytearray) -> HANDLE_TYPE:
-    filename = args.decode()
+def handle_screenshot(args: str) -> HANDLE_TYPE:
+    filename = args
     if args == "" or args == b"":
         filename = (
             datetime.datetime.now().isoformat().replace(":", "_") + "_screenshot.png"
@@ -135,43 +134,39 @@ def get_file_size(file_path: str) -> int:
         return -1  # Or any other value indicating that the file was not found
 
 
-SEND_SIZE = 2048
+SEND_SIZE = 4096
 
 
-def handle_file(args: bytearray, thread) -> HANDLE_TYPE:
+def handle_file(args: str, thread) -> HANDLE_TYPE:
     # the client needs to read chunked
     # find the file length
     # find the chunk numbers as file_length // chunk_size + 1 handle edge cases
     # send chuck by chunk
     # then send a final message
 
-    print("Args: ")
-    print(args)
-    file_name = args.decode()
-    print("Requested filename: ", file_name)
+    file_name = args
     file_size = get_file_size(file_name)
     chunk_amount = file_size // SEND_SIZE + 1
     if file_size % SEND_SIZE == 0 and file_size > SEND_SIZE:
         chunk_amount -= 1  # no partial is needed
-    print(f"Total Chunk amount: {chunk_amount}")
     thread.open_files[file_name] = open(file_name, "rb")
     return "FILR~" + str(chunk_amount) + "~" + file_name, True
 
 
-def handle_chuk(args: bytearray, thread):
-    file_handle = thread.open_files[args.decode()]
+def handle_chuk(args: str, thread):
+    file_handle = thread.open_files[args]
     bin_data = file_handle.read(SEND_SIZE)
 
     # Convert binary data to base64-encoded string
     bin_data_b64 = base64.b64encode(bin_data).decode("utf-8")
 
-    return "CHUR~" + args.decode() + "~" + bin_data_b64, True
+    return "CHUR~" + args + "~" + bin_data_b64, True
 
 
-def handle_close_file(args: bytearray, thread):
+def handle_close_file(args: str, thread):
     print("Requested Closed. ")
-    thread.open_files[args.decode()].close()
-    print("Closed: ", args.decode())
-    del thread.open_files[args.decode()]
+    thread.open_files[args].close()
+    print("Closed: ", args)
+    del thread.open_files[args]
     print("Closed sucsessfully")
     return "OKAY", True
