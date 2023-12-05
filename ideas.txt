@@ -1,0 +1,4 @@
+RSA.
+use sha1/md5 to checksum the files to make sure we good 
+chat rooms 
+Handle the possiblity of 2 threads creating the same img at once so same time 
