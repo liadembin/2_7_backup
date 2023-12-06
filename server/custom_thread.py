@@ -18,7 +18,7 @@ from handlers import (
     handle_file,
     handle_screenshot,
 )
-
+import os 
 
 class CustomThread(threading.Thread):
     def __init__(self, cli_sock, addr, tid, tcp_debug=False):
@@ -28,7 +28,8 @@ class CustomThread(threading.Thread):
         self.tid = tid
         self.open_files = {}
         self.tcp_debug = tcp_debug
-
+        if not os.path.isdir("srcshot"):
+            os.makedir("srcshot")
     def handle_request(self, request):
         """
         Hadle client request

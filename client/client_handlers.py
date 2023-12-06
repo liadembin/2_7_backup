@@ -11,7 +11,6 @@ def decode_from_pickle_and_from_base64(base):
         data = pickle.loads(bytearr)
         return data
     except Exception as e:
-        print(f"Error2: {e}")
         return None
 
 
@@ -23,6 +22,8 @@ def get_tree_structure(file_structure):
         current_dict = directory_structure
 
         for part in parts[:-1]:
+            # The setdefault() method returns the value of the item with the specified key.
+            # If the key does not exist, insert the key, with the specified value, see example below
             current_dict = current_dict.setdefault(part, {})
 
         current_dict[parts[-1]] = None
