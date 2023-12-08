@@ -17,11 +17,13 @@ from client_handlers import (
 )
 import logging
 
-logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S")
+logging.basicConfig(format="%(asctime)s - %(message)s",
+                    datefmt="%d-%b-%y %H:%M:%S")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 logger.propagate = True
+SCREEN_SHOT_OUTPUT_DIR = "SCREEN_SHOTS_OUTS"
 FILE_MENU_LOCATION = "10"
 GET_CHUNK_CONST = "1001"
 USER_MENU_TO_CODE_DICT = {
@@ -36,6 +38,8 @@ USER_MENU_TO_CODE_DICT = {
     "9": "SCRS",
     FILE_MENU_LOCATION: "FILE",
     GET_CHUNK_CONST: "CHUK",
+    "11": "REGI",
+    "12": "LOGI"
 }
 
 
@@ -67,6 +71,8 @@ def menu() -> Tuple[str, List[str], List[str]]:
         "delete a file",
         "screen shot",
         "fetch a file",
+        "Sign up for the chating service",
+        "Sign in to the chating service"
     ]
 
     for index, option in enumerate(options, start=1):
@@ -90,12 +96,16 @@ def menu() -> Tuple[str, List[str], List[str]]:
         "7": [[2, ["File to copy", "New file name to copy to"]], [0, []]],
         "8": [[1, ["File name to delete"]], [0, []]],
         "10": [[1, ["Remote file name"]], [1, ["local file name"]]],
+        "11": [[2, ["Username? ", " Password?"]], [0, []]],
+        "12": [[2, ["Username? ", " Password?"]], [0, []]],
+
     }
     row = count_args.get(request, [[0, [""]], [0, [""]]])
 
     for i, req_row in enumerate(row):
         for j in range(req_row[0]):
-            (server_args if i == 0 else client_args).append(input(req_row[1][j] + " "))
+            (server_args if i == 0 else client_args).append(
+                input(req_row[1][j] + " "))
     return request, server_args, client_args
 
 
@@ -114,10 +124,22 @@ def protocol_build_request(from_user):
 
 def handle_screenshot(fileds, client_args):
     handle_msg(
-        protocol_build_request([FILE_MENU_LOCATION, ["./srcshot/" + fileds[-1]]]),
+        protocol_build_request(
+            [FILE_MENU_LOCATION, [f"./{SCREEN_SHOT_OUTPUT_DIR}" + fileds[-1]]]),
         [input(" What name to give the screenshot? ")],
     )
     return f"Server took a screenshot named {fileds[-1]} sucsessfuly"
+
+
+def handle_register_response(fields, client_args):
+
+    return f"Register Request returned fields: {fields} "
+    pass
+
+
+def handle_signin_response(fields, client_args):
+    return f"Signin Request returned fields: {fields}"
+    pass
 
 
 def protocol_parse_reply(reply, client_args):
@@ -141,6 +163,8 @@ def protocol_parse_reply(reply, client_args):
             "EXER": handle_exec,
             "FILR": handle_file,
             "CHUR": handle_recived_chunk,
+            "REGR": handle_register_response,
+            "SIGR": handle_signin_response
         }
         if code in special_handlers.keys():
             return special_handlers[code](fields, client_args)
@@ -206,7 +230,8 @@ def main(ip: str) -> None:
         print(f"Connect succeeded {ip}:{port}")
         connected = True
     except Exception:
-        print(f"Error while trying to connect.  Check ip or port -- {ip}:{port}")
+        print(
+            f"Error while trying to connect.  Check ip or port -- {ip}:{port}")
 
     while connected:
         from_user = menu()

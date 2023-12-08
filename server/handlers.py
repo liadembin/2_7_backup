@@ -1,3 +1,4 @@
+from db import get_received_messages_by_id, get_user_by_sessid, sign_in_to_db, sign_up_to_db, get_sent_messages_by_id
 import shutil
 import random
 import os
@@ -170,3 +171,57 @@ def handle_close_file(args: str, thread):
     del thread.open_files[args]
     print("Closed sucsessfully")
     return "OKAY", True
+
+
+def handle_register(args: str):
+    print("Requested to register: ")
+    username, password = args.split("~")
+    sessid, errors = sign_up_to_db(username, password)
+    print("Sign Up returned: ")
+    print(f"{sessid =}")
+    print(f"{errors =}")
+    if len(errors) > 0:
+        flattned = []
+        for code, msg in errors:
+            flattned.append(str(code))
+            flattned.append(msg)
+        return "REER~", "~".join(flattned)
+
+    return f"REGR~{sessid}", True
+
+
+def handle_signin(args: str):
+    username, password = args.split("~")
+    print(f"Sigin with: {username = } {password =}")
+    sessid, errors = sign_in_to_db(username, password)
+    print("Sign Up returned: ")
+    print(f"{sessid =}")
+    print(f"{errors =}")
+    if len(errors) > 0:
+        flattned = []
+        for code, msg in errors:
+            flattned.append(str(code))
+            flattned.append(msg)
+        return "REER~", "~".join(flattned)
+
+    return f"REGR~{sessid}", True
+
+
+def handle_get_inbox(args: str):
+    sessid = args
+    user = get_user_by_sessid(sessid)
+    if user is None:
+        return "INBE~Invalid Session Token~1001", True
+    inbox = get_received_messages_by_id(user)[0]
+    encoded = base64_from_pickle(pickle.dumps(inbox))
+    return "BOXR~" + encoded, True
+
+
+def handle_get_outbox(args: str):
+    sessid = args
+    user = get_user_by_sessid(sessid)
+    if user is None:
+        return "OUTE~Invalid Session Token~1001", True
+    inbox = get_sent_messages_by_id(user)[0]
+    encoded = base64_from_pickle(pickle.dumps(inbox))
+    return "OUTR~" + encoded, True

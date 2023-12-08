@@ -10,7 +10,7 @@ def decode_from_pickle_and_from_base64(base):
         # Deserialize the pickled data
         data = pickle.loads(bytearr)
         return data
-    except Exception as e:
+    except Exception:
         return None
 
 
@@ -22,8 +22,10 @@ def get_tree_structure(file_structure):
         current_dict = directory_structure
 
         for part in parts[:-1]:
-            # The setdefault() method returns the value of the item with the specified key.
-            # If the key does not exist, insert the key, with the specified value, see example below
+            # The setdefault() method returns the value of the item with
+            # the specified key.
+            # If the key does not exist, insert the key, with the specified
+            # value, see example below
             current_dict = current_dict.setdefault(part, {})
 
         current_dict[parts[-1]] = None
@@ -49,8 +51,8 @@ def handle_dir(fileds, client_args):
 
 def handle_exec(fileds, client_args):
     code, ret_code, stdin, sterr = fileds
-    return f"""return code: {ret_code} \n 
-                stdout: {stdin} \n 
+    return f"""return code: {ret_code} \n
+                stdout: {stdin} \n
                 stderr: {sterr}
             """
 

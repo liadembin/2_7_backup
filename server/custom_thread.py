@@ -17,8 +17,12 @@ from handlers import (
     handle_copy,
     handle_file,
     handle_screenshot,
+    handle_register,
+    handle_signin
 )
-import os 
+import os
+SCREEN_SHOT_OUTPUT_DIR = "SCREEN_SHOTS_OUTS"
+
 
 class CustomThread(threading.Thread):
     def __init__(self, cli_sock, addr, tid, tcp_debug=False):
@@ -28,12 +32,14 @@ class CustomThread(threading.Thread):
         self.tid = tid
         self.open_files = {}
         self.tcp_debug = tcp_debug
-        if not os.path.isdir("srcshot"):
-            os.makedir("srcshot")
+        if not os.path.isdir(SCREEN_SHOT_OUTPUT_DIR):
+            os.makedirs(SCREEN_SHOT_OUTPUT_DIR)
+
     def handle_request(self, request):
         """
         Hadle client request
-        tuple :return: return message to send to client and bool if to close the client self.socket
+        tuple :return: return message to send to client and
+        bool if to close the client self.socket
         """
         try:
             request_code = request[:4]
@@ -94,11 +100,15 @@ class CustomThread(threading.Thread):
             "FILE": handle_file,
             "CHUK": handle_chuk,
             "CLOS": handle_close_file,
+            "REGI": handle_register,
+            "LOGI": handle_signin
         }
         request_code = request[:4].decode()
-        # in this proto, the code is the client[:3] +"R", so can replace that and have
+        # in this proto, the code is the client[:3] +"R", so can update this
         handler = request_handlers.get(request_code, handle_error)
-        if request_code == "CHUK" or request_code == "FILE" or request_code == "CLOS":
+
+        functions_that_require_this = ["CHUK", "FILE", "CLOS"]
+        if request_code in functions_that_require_this:
             response = handler(request[5:].decode(), self)
         else:
             response = handler(request[5:].decode())  # 5 not 4 because of ~
