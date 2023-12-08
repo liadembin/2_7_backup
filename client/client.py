@@ -14,6 +14,8 @@ from client_handlers import (
     handle_dir,
     handle_exec,
     handle_recived_chunk,
+    handle_get_unread,
+    handle_add_message
 )
 import logging
 
@@ -39,7 +41,9 @@ USER_MENU_TO_CODE_DICT = {
     FILE_MENU_LOCATION: "FILE",
     GET_CHUNK_CONST: "CHUK",
     "11": "REGI",
-    "12": "LOGI"
+    "12": "LOGI",
+    "13": "GETM",
+    "14": "ADDM"
 }
 
 
@@ -164,7 +168,10 @@ def protocol_parse_reply(reply, client_args):
             "FILR": handle_file,
             "CHUR": handle_recived_chunk,
             "REGR": handle_register_response,
-            "SIGR": handle_signin_response
+            "SIGR": handle_signin_response,
+            "GETM": handle_get_unread,
+            "ADDM": handle_add_message,
+
         }
         if code in special_handlers.keys():
             return special_handlers[code](fields, client_args)

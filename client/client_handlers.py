@@ -66,3 +66,11 @@ def handle_recived_chunk(fields, client_args):
     with open(client_args[0], "ab+") as f:
         f.write(decoded_to_bin)
     return ""
+
+
+def handle_get_unread(fields, client_args):
+    pass
+
+
+def handle_add_message(fields, client_args):
+    pass

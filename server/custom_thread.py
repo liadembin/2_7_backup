@@ -18,7 +18,9 @@ from handlers import (
     handle_file,
     handle_screenshot,
     handle_register,
-    handle_signin
+    handle_signin,
+    handle_get_unread,
+    handle_add_message
 )
 import os
 SCREEN_SHOT_OUTPUT_DIR = "SCREEN_SHOTS_OUTS"
@@ -101,7 +103,9 @@ class CustomThread(threading.Thread):
             "CHUK": handle_chuk,
             "CLOS": handle_close_file,
             "REGI": handle_register,
-            "LOGI": handle_signin
+            "LOGI": handle_signin,
+            "GETM": handle_get_unread,
+            "ADDM": handle_add_message,
         }
         request_code = request[:4].decode()
         # in this proto, the code is the client[:3] +"R", so can update this

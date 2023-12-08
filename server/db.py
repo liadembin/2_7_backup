@@ -1,3 +1,4 @@
+import datetime
 from handle_hashing import hash_password, generate_sessid, generate_salt
 import secrets
 from typing import List, Tuple, Literal
@@ -78,7 +79,7 @@ def get_received_messages_by_id(user_id):
     return rows
 
 
-def get_user_by_sessid(sessid) -> int:
+def get_user_by_sessid(sessid) -> List[str]:
     connection = connection_pool.get_connection()
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM USERS WHERE SESSID = %s", sessid)
@@ -99,3 +100,44 @@ def get_sent_messages_by_id(id):
     )
     rows = cursor.fetchall()
     return rows
+
+
+def get_unread_messages_from_sessid(sessid):
+    connection = connection_pool.get_connection()
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT messages.*, users.username as sender_username
+        FROM messages
+        INNER JOIN users ON messages.sender_id = users.id
+        WHERE messages.message_type = 'Received' AND messages.receiver_sessid = %s;
+    """, (sessid,))
+    rows = cursor.fetchall()
+    return rows
+
+
+def add_message(sessid, msg_content):
+    try:
+        # Assuming you have functions for getting user ID and checking sessid
+        sender_id = get_user_by_sessid(sessid)[0]
+
+        if sender_id is None:
+            return None, "Invalid sender session ID"
+
+        # Assuming you have a connection_pool defined somewhere
+        connection = connection_pool.get_connection()
+
+        # Inserting the message into the database
+        cursor = connection.cursor()
+        sending_time = datetime.datetime.now()
+        message_type = 'Sent'  # Assuming this is a sent message
+        cursor.execute("""
+            INSERT INTO messages (sender_id, receiver_id, sendingtime, content, message_type)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (sender_id, 2, sending_time, msg_content, message_type))
+
+        connection.commit()
+
+        return "Message added successfully", None
+
+    except Exception as e:
+        return None, f"Error adding message: {str(e)}"

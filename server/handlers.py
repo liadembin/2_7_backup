@@ -225,3 +225,18 @@ def handle_get_outbox(args: str):
     inbox = get_sent_messages_by_id(user)[0]
     encoded = base64_from_pickle(pickle.dumps(inbox))
     return "OUTR~" + encoded, True
+
+
+def handle_get_unread(args):
+    messages = get_unread_messages_from_sessid(args.split("~")[0])
+    # Add rsa encoding
+    encoded = base64_from_pickle(pickle.dumps(messages))
+    return "UNRR~" + encoded, True
+
+
+def handle_add_message(args):
+    sessid, msg = args.split("~")
+    succsess, error = add_message(sessid, msg)
+    if error:
+        return "ADME~"+error
+    return "ADMR~" + succsess
