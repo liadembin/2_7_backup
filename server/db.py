@@ -57,7 +57,7 @@ def sign_in_to_db(username, password) -> ReturnDbType:
         hashed_password = hash_password(password, rows[3])
         if hashed_password != rows[2]:
             return "", [(f"Invalid Credentials", 111001)]
-        return f"rows: {rows =}", []
+        return f"{}", []
 
     except Exception as e:
         return "", [(f"General Error {e}", 11001)]

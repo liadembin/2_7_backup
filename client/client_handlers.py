@@ -69,6 +69,8 @@ def handle_recived_chunk(fields, client_args):
 
 
 def handle_get_unread(fields, client_args):
+    print("Unread Messages: ")
+    print(fields)
     pass
 
 

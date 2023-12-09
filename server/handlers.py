@@ -1,4 +1,4 @@
-from db import get_received_messages_by_id, get_user_by_sessid, sign_in_to_db, sign_up_to_db, get_sent_messages_by_id
+from db import get_received_messages_by_id, get_user_by_sessid, sign_in_to_db, sign_up_to_db, get_sent_messages_by_id, get_unread_messages_from_sessid
 import shutil
 import random
 import os
@@ -203,12 +203,13 @@ def handle_signin(args: str):
             flattned.append(str(code))
             flattned.append(msg)
         return "REER~", "~".join(flattned)
-
+    print("Client Sessid: ", sessid)
     return f"REGR~{sessid}", True
 
 
 def handle_get_inbox(args: str):
     sessid = args
+    print("User with sessid requested: ", sessid)
     user = get_user_by_sessid(sessid)
     if user is None:
         return "INBE~Invalid Session Token~1001", True

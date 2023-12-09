@@ -76,7 +76,9 @@ def menu() -> Tuple[str, List[str], List[str]]:
         "screen shot",
         "fetch a file",
         "Sign up for the chating service",
-        "Sign in to the chating service"
+        "Sign in to the chating service",
+        "Get unread messages",
+        "Send a message"
     ]
 
     for index, option in enumerate(options, start=1):
@@ -136,14 +138,15 @@ def handle_screenshot(fileds, client_args):
 
 
 def handle_register_response(fields, client_args):
-
+    global sessid
+    sessid = fields[1]
     return f"Register Request returned fields: {fields} "
-    pass
 
 
 def handle_signin_response(fields, client_args):
+    global sessid
+    sessid = fields
     return f"Signin Request returned fields: {fields}"
-    pass
 
 
 def protocol_parse_reply(reply, client_args):
