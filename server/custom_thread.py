@@ -32,20 +32,13 @@ import zlib
 
 
 class CustomThread(threading.Thread):
-    def __init__(self, cli_sock, rsa_clien: RsaClient, addr, tid, tcp_debug=False):
+    def __init__(self, cli_sock, addr, tid, tcp_debug=False):
         super(CustomThread, self).__init__()
         self.sock = cli_sock
         self.addr = addr
         self.tid = tid
         self.open_files = {}
         self.tcp_debug = tcp_debug
-        self.rsa_clien = rsa_clien
-        print("Encoded: ")
-        # print("Hello World".encode())
-        # print("From Bytes: ", int.from_bytes("Hello World".encode()))
-        # print(rsa_clien.encrypt(int.from_bytes(
-        #     "Hello World".encode()), rsa_clien.public_key))
-        print(rsa_clien.encrypt(0b01011000, rsa_clien.public_key))
         if not os.path.isdir(SCREEN_SHOT_OUTPUT_DIR):
             os.makedirs(SCREEN_SHOT_OUTPUT_DIR)
 

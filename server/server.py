@@ -1,4 +1,4 @@
-from rsa_client import RsaClient
+# from rsa_client import RsaClient
 import os
 import pickle
 import socket
@@ -17,7 +17,7 @@ def main():
     4. every X clients limit will exit
     """
     # realy need to find better way to do this
-    client = RsaClient(17, 11)
+    # client = RsaClient(17, 11)
     threads = []
     srv_sock = socket.socket()
 
@@ -32,7 +32,9 @@ def main():
     while True:
         print("\nMain thread: before accepting ...")
         cli_sock, addr = srv_sock.accept()
-        t = CustomThread(cli_sock, client, addr, tid, True)
+        
+        #t = CustomThread(cli_sock, client, addr, tid, True)
+        t = CustomThread(cli_sock, addr, tid, True)
         t.start()
         tid += 1
         break  # for testing, i use just one client for basic tests

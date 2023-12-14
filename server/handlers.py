@@ -143,7 +143,7 @@ def get_file_size(file_path: str) -> int:
         return -1  # Or any other value indicating that the file was not found
 
 
-SEND_SIZE = 4096
+SEND_SIZE = 1024 * 16
 
 
 def handle_file(args: str, thread) -> HANDLE_TYPE:
