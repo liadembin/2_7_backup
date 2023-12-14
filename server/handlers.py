@@ -1,12 +1,4 @@
 import zlib
-from db import (
-    get_received_messages_by_id,
-    get_user_by_sessid,
-    sign_in_to_db,
-    sign_up_to_db,
-    get_sent_messages_by_id,
-    get_unread_messages_from_sessid,
-)
 import shutil
 import random
 import os
@@ -219,67 +211,68 @@ def handle_close_file(args: str, thread):
     print("Closed sucsessfully")
     return "OKAY", True
 
-
-def handle_register(args: str):
-    print("Requested to register: ")
-    username, password = args.split("~")
-    sessid, errors = sign_up_to_db(username, password)
-    print("Sign Up returned: ")
-    print(f"{sessid =}")
-    print(f"{errors =}")
-    if len(errors) > 0:
-        flattned = []
-        for code, msg in errors:
-            flattned.append(str(code))
-            flattned.append(msg)
-        return "REER~", "~".join(flattned)
-
-    return f"REGR~{sessid}", True
-
-
-def handle_signin(args: str):
-    username, password = args.split("~")
-    print(f"Sigin with: {username = } {password =}")
-    sessid, errors = sign_in_to_db(username, password)
-    print("Sign Up returned: ")
-    print(f"{sessid =}")
-    print(f"{errors =}")
-    if len(errors) > 0:
-        flattned = []
-        for code, msg in errors:
-            flattned.append(str(code))
-            flattned.append(msg)
-        return "REER~", "~".join(flattned)
-    print("Client Sessid: ", sessid)
-    return f"REGR~{sessid}", True
-
-
-def handle_get_inbox(args: str):
-    sessid = args
-    print("User with sessid requested: ", sessid)
-    user = get_user_by_sessid(sessid)
-    if user is None:
-        return "INBE~Invalid Session Token~1001", True
-    inbox = get_received_messages_by_id(user)[0]
-    encoded = to_base64_and_pickled(inbox)
-    return "BOXR~" + encoded, True
-
-
-def handle_get_outbox(args: str):
-    sessid = args
-    user = get_user_by_sessid(sessid)
-    if user is None:
-        return "OUTE~Invalid Session Token~1001", True
-    inbox = get_sent_messages_by_id(user)[0]
-    encoded = to_base64_and_pickled(inbox)
-    return "OUTR~" + encoded, True
-
-
-def handle_get_unread(args):
-    messages = get_unread_messages_from_sessid(args.split("~")[0])
-    # Add rsa encoding
-    encoded = to_base64_and_pickled(messages)
-    return "UNRR~" + encoded, True
+#
+# def handle_register(args: str):
+#     print("Requested to register: ")
+#     username, password = args.split("~")
+#     sessid, errors = sign_up_to_db(username, password)
+#     print("Sign Up returned: ")
+#     print(f"{sessid =}")
+#     print(f"{errors =}")
+#     if len(errors) > 0:
+#         flattned = []
+#         for code, msg in errors:
+#             flattned.append(str(code))
+#             flattned.append(msg)
+#         return "REER~", "~".join(flattned)
+#
+#     return f"REGR~{sessid}", True
+#
+#
+# def handle_signin(args: str):
+#     username, password = args.split("~")
+#     print(f"Sigin with: {username = } {password =}")
+#     sessid, errors = sign_in_to_db(username, password)
+#     print("Sign Up returned: ")
+#     print(f"{sessid =}")
+#     print(f"{errors =}")
+#     if len(errors) > 0:
+#         flattned = []
+#         for code, msg in errors:
+#             flattned.append(str(code))
+#             flattned.append(msg)
+#         return "REER~", "~".join(flattned)
+#     print("Client Sessid: ", sessid)
+#     return f"REGR~{sessid}", True
+#
+#
+# def handle_get_inbox(args: str):
+#     sessid = args
+#     print("User with sessid requested: ", sessid)
+#     user = get_user_by_sessid(sessid)
+#     if user is None:
+#         return "INBE~Invalid Session Token~1001", True
+#     inbox = get_received_messages_by_id(user)[0]
+#     encoded = to_base64_and_pickled(inbox)
+#     return "BOXR~" + encoded, True
+#
+#
+# def handle_get_outbox(args: str):
+#     sessid = args
+#     user = get_user_by_sessid(sessid)
+#     if user is None:
+#         return "OUTE~Invalid Session Token~1001", True
+#     inbox = get_sent_messages_by_id(user)[0]
+#     encoded = to_base64_and_pickled(inbox)
+#     return "OUTR~" + encoded, True
+#
+#
+# def handle_get_unread(args):
+#     messages = get_unread_messages_from_sessid(args.split("~")[0])
+#     # Add rsa encoding
+#     encoded = to_base64_and_pickled(messages)
+#     return "UNRR~" + encoded, True
+#
 
 
 def handle_add_message(args):

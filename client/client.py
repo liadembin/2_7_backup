@@ -17,8 +17,8 @@ from client_handlers import (
     handle_exec,
     handle_recived_chunk,
     # handle_recived_zipped_chunk,
-    handle_get_unread,
-    handle_add_message,
+    # handle_get_unread,
+    # handle_add_message,
 )
 import logging
 
@@ -30,6 +30,7 @@ logger.addHandler(logging.StreamHandler())
 logger.propagate = True
 SCREEN_SHOT_OUTPUT_DIR = "srcshot"
 FILE_MENU_LOCATION = "10"
+ZIPED_FILE_MENU_LOCATION = "11"
 GET_CHUNK_CONST = "1001"
 GET_ZIPED_CHUNK_CONST = "10001"
 TAKE_SCREENSHOT = "9"
@@ -45,11 +46,11 @@ USER_MENU_TO_CODE_DICT = {
     TAKE_SCREENSHOT: "SCRS",
     FILE_MENU_LOCATION: "FILE",
     GET_CHUNK_CONST: "CHUK",
-    "11": "REGI",
-    "12": "LOGI",
-    "13": "GETM",
-    "14": "ADDM",
-    "15": "ZFIL",
+    # "11": "REGI",
+    # "12": "LOGI",
+    # "13": "GETM",
+    # "14": "ADDM",
+    "11": "ZFIL",
     GET_ZIPED_CHUNK_CONST: "ZHUK",
 }
 
@@ -130,9 +131,9 @@ def menu() -> Tuple[str, List[str], List[str]]:
         "7": [[2, ["File to copy", "New file name to copy to"]], [0, []]],
         "8": [[1, ["File name to delete"]], [0, []]],
         "10": [[1, ["Remote file name"]], [1, ["local file name"]]],
-        "11": [[2, ["Username? ", " Password?"]], [0, []]],
-        "12": [[2, ["Username? ", " Password?"]], [0, []]],
-        "15": [[1, ["Remote file name"]], [1, ["local file name"]]],
+        # "11": [[2, ["Username? ", " Password?"]], [0, []]],
+        # "12": [[2, ["Username? ", " Password?"]], [0, []]],
+        "11": [[1, ["Remote file name"]], [1, ["local file name"]]],
     }
     row = count_args.get(request, [[0, [""]], [0, [""]]])
 
@@ -161,25 +162,16 @@ def handle_screenshot(fileds, client_args):
     # handle_msg(TAKE_SCREENSHOT, [])
     handle_msg(
         protocol_build_request(
-            [FILE_MENU_LOCATION, [f"./{SCREEN_SHOT_OUTPUT_DIR}/" + fileds[-1]]]
+            # [ZIPED_FILE_MENU_LOCATION,
+            [FILE_MENU_LOCATION,
+             [
+                 f"./{SCREEN_SHOT_OUTPUT_DIR}/" + fileds[-1]]]
         ),
         [out_name],
     )
     img = Image.open(out_name)
     img.show()
-    return f"Server took a screenshot named {fileds[-1]} sucsessfuly"
-
-
-def handle_register_response(fields, client_args):
-    global sessid
-    sessid = fields[1]
-    return f"Register Request returned fields: {fields} "
-
-
-def handle_signin_response(fields, client_args):
-    global sessid
-    sessid = fields
-    return f"Signin Request returned fields: {fields}"
+    return ""  # f"Server took a screenshot named {fileds[-1]} sucsessfuly"
 
 
 def protocol_parse_reply(reply, client_args):
@@ -204,10 +196,10 @@ def protocol_parse_reply(reply, client_args):
             "FILR": handle_file,
             "CHUR": handle_recived_chunk,
             "ZFIR": handle_recived_zipped_file,
-            "REGR": handle_register_response,
-            "SIGR": handle_signin_response,
-            "GETM": handle_get_unread,
-            "ADDM": handle_add_message,
+            # "REGR": handle_register_response,
+            # "SIGR": handle_signin_response,
+            # "GETM": handle_get_unread,
+            # "ADDM": handle_add_message,
         }
         if code in special_handlers.keys():
             return special_handlers[code](fields, client_args)
