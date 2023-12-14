@@ -160,7 +160,6 @@ def handle_file(args: str, thread) -> HANDLE_TYPE:
 
 
 def get_chunk_amount(file_name):
-
     file_size = get_file_size(file_name)
     chunk_amount = file_size // SEND_SIZE + 1
     if file_size % SEND_SIZE == 0 and file_size > SEND_SIZE:
@@ -169,10 +168,10 @@ def get_chunk_amount(file_name):
 
 
 def zlib_compress_file(input_filename, output_filename):
-    with open(input_filename, 'rb') as f_in:
+    with open(input_filename, "rb") as f_in:
         data = f_in.read()
         compressed_data = zlib.compress(data)
-    with open(output_filename, 'wb') as f_out:
+    with open(output_filename, "wb") as f_out:
         f_out.write(compressed_data)
 
 
@@ -187,7 +186,7 @@ def handle_get_zipped_file(args: str, thread) -> HANDLE_TYPE:
     # return "ZIFR~" + str(chunk_amount) + "~" + file_name, True
     # gzip the file
     # return ZFIR which just activates the client file handler then unzips
-    compres_name = args + '.gz'
+    compres_name = args + ".gz"
     zlib_compress_file(args, compres_name)
     thread.open_files[compres_name] = open(compres_name, "rb")
     return f"ZFIR~{get_chunk_amount(compres_name)}~{compres_name}", True
@@ -210,6 +209,7 @@ def handle_close_file(args: str, thread):
     del thread.open_files[args]
     print("Closed sucsessfully")
     return "OKAY", True
+
 
 #
 # def handle_register(args: str):

@@ -1,11 +1,12 @@
-# from client import handle_msg
+
 import base64
 import pickle
 import zlib
-from tcp_by_size import send_with_size,recv_by_size
-from client_custom_exceptions import DisconnectRequest 
+from tcp_by_size import send_with_size, recv_by_size
+from client_custom_exceptions import DisconnectRequest
 from PIL import Image
 from alive_progress import alive_bar
+
 SCREEN_SHOT_OUTPUT_DIR = "srcshot"
 FILE_MENU_LOCATION = "10"
 ZIPED_FILE_MENU_LOCATION = "11"
@@ -43,24 +44,29 @@ def decode_from_pickle_and_from_base64(base):
     except Exception:
         return None
 
+
 def handle_file(fields, client_args):
     code, chunk_amount, file_name = fields
     with alive_bar(int(chunk_amount), bar="blocks", spinner="wait") as bar:
         for i in range(int(chunk_amount)):
             # print(f"Chunk: {i}")
-            handle_msg(None,("CHUK~" + file_name).encode(), client_args)
+            
+            #req_str = ("CHUK~" + file_name).encode()
+            req_str=  join_code_params("CHUK",file_name)#protocol_build_request()
+            handle_msg(to_send=req_str, client_args=client_args)
             bar()
         # print("Finished writing the chunk")
-    handle_msg(None,"CLOS~" + file_name, [file_name])
+    close_str=  join_code_params("CLOS",file_name)
+    handle_msg(to_send=close_str, client_args=[file_name])
     return ""
 
 
 def decompress_file(input_file, output_file):
     try:
-        with open(input_file, 'rb') as f_in:
+        with open(input_file, "rb") as f_in:
             compressed_data = f_in.read()
             decompressed_data = zlib.decompress(compressed_data)
-        with open(output_file, 'wb') as f_out:
+        with open(output_file, "wb") as f_out:
             f_out.write(decompressed_data)
     except Exception as e:
         print("Failed to decomp")
@@ -70,7 +76,8 @@ def handle_recived_zipped_file(fields, client_args):
     code, chunk_amount, compress_file_name = fields
     output_filename = client_args[0]
     client_args[0] = client_args[0] + ".gz"
-    handle_msg(None,("FILE~" + compress_file_name).encode(), client_args)
+    send_str = join_code_params("FILE",compress_file_name)
+    handle_msg(to_send=send_str, client_args=client_args)
     # handle_file([code, chunk_amount, compress_file_name], client_args)
     print("Now Decomping")
     # print("Finished writing the chunk")
@@ -131,22 +138,28 @@ def handle_recived_chunk(fields, client_args):
     with open(client_args[0], "ab+") as f:
         f.write(decoded_to_bin)
     return ""
-
-def handle_msg(sock,to_send, client_args):
-    # send_with_size(sock,to_send,"",True)
-    global sock_save 
+def get_sock(sock):
+    global sock_save
     if sock == None:
-        sock = sock_save
+        #sock = sock_save
+        return sock_save
     else:
-        sock_save = sock 
-    
-    send_with_size(sock, to_send)
-    byte_data = recv_by_size(sock, "", False)
+        sock_save = sock
+        return sock 
+def handle_msg(sock=None, to_send="", client_args=[]):
+    # send_with_size(sock,to_send,"",True)
+    soc = get_sock(sock) # first time, its called from main. it is provided a socket and will save it 
+    # second time or when called from handlers it will returned the saved socket
+
+    send_with_size(soc, to_send)
+    byte_data = recv_by_size(soc, "", False)
     if byte_data == b"":
         print("Seems server disconnected abnormal")
         raise DisconnectRequest("Server dissconnected ")
 
     handle_reply(byte_data, client_args)
+
+
 def handle_reply(reply, client_args):
     """
     get the tcp upcoming message and show reply information
@@ -158,22 +171,17 @@ def handle_reply(reply, client_args):
         print("\n==========================================================")
         print(f"\t {to_show} \t")
         print("==========================================================")
-def handle_screenshot(fileds, client_args):
-    out_name = input(" What name to give the screenshot? ")
-    # handle_msg(TAKE_SCREENSHOT, [])
-    handle_msg(
-        None,
-        protocol_build_request(
-            # [ZIPED_FILE_MENU_LOCATION,
-            [FILE_MENU_LOCATION,
-             [
-                 f"./{SCREEN_SHOT_OUTPUT_DIR}/" + fileds[-1]]]
-        ),
-        [out_name],
-    )
+
+
+def handle_screenshot(fields, client_args):
+    out_name = input("What name to give the screenshot? ")
+    remote_filename = f"./{SCREEN_SHOT_OUTPUT_DIR}/" + fields[-1]
+    send_str = join_code_params(USER_MENU_TO_CODE_DICT[FILE_MENU_LOCATION], remote_filename)
+    handle_msg(to_send=send_str, client_args=[out_name])
     img = Image.open(out_name)
     img.show()
-    return ""  # f"Server took a screenshot named {fileds[-1]} sucsessfuly"
+    return ""  # f"Server took a screenshot named {fields[-1]} successfully"
+
 
 #
 # def handle_get_unread(fields, client_args):
@@ -182,6 +190,7 @@ def handle_screenshot(fileds, client_args):
 #     pass
 from client_custom_exceptions import DisconnectRequest
 from client_handlers import *
+
 
 def protocol_parse_reply(reply, client_args):
     """
@@ -236,18 +245,26 @@ def protocol_parse_reply(reply, client_args):
         raise e
     return to_show
 
+
 def protocol_build_request(from_user):
     """
     build the request according to user selection and protocol
     return: string - msg code
     """
-    ret_str = (
-        USER_MENU_TO_CODE_DICT.get(from_user[0], "")
-        + ("~" if len(from_user[1]) > 0 else "")
-        + "~".join(from_user[1])
+    print("From User: ")
+    print(from_user)
+    ret_str = join_code_params(
+        USER_MENU_TO_CODE_DICT.get(from_user[0], ""),
+        *from_user[1]
     )
+    print("Ret Str: ")
+    print(ret_str)
     return ret_str
+def join_code_params(code, *params):
+    built_str = code
 
-#
-# def handle_add_message(fields, client_args):
-#     pass
+    if params:
+        # Add ~ because join doesn't put it at the start
+        built_str = built_str + "~" + "~".join(params)
+
+    return built_str

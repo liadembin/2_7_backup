@@ -11,18 +11,17 @@ import traceback
 from tcp_by_size import recv_by_size, send_with_size
 from client_custom_exceptions import DisconnectErr, DisconnectRequest
 import zlib
+
 # from __ import * ruins LSP.
 from client_handlers import *
 
 import logging
 
-logging.basicConfig(format="%(asctime)s - %(message)s",
-                    datefmt="%d-%b-%y %H:%M:%S")
+logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 logger.propagate = True
-
 
 
 def menu() -> Tuple[str, List[str], List[str]]:
@@ -45,7 +44,7 @@ def menu() -> Tuple[str, List[str], List[str]]:
         # "Sign in to the chating service",
         # "Get unread messages",
         # "Send a message",
-        "copy(with commpression per chunk) a file"
+        "copy(with commpression per chunk) a file",
     ]
 
     for index, option in enumerate(options, start=1):
@@ -57,8 +56,12 @@ def menu() -> Tuple[str, List[str], List[str]]:
 
     count_args = {
         "5": [
-            [1, [
-                "Any Sub directory? (. for current, ../ OR ./ works. may also specify dir name like: .git )"],],
+            [
+                1,
+                [
+                    "Any Sub directory? (. for current, ../ OR ./ works. may also specify dir name like: .git )"
+                ],
+            ],
             [0, []],
         ],
         "6": [[1, ["Program name / path to the .exe "]], [0, []]],
@@ -73,19 +76,8 @@ def menu() -> Tuple[str, List[str], List[str]]:
 
     for i, req_row in enumerate(row):
         for j in range(req_row[0]):
-            (server_args if i == 0 else client_args).append(
-                input(req_row[1][j] + " "))
+            (server_args if i == 0 else client_args).append(input(req_row[1][j] + " "))
     return request, server_args, client_args
-
-
-
-
-
-
-
-
-
-
 
 
 def main(ip: str) -> None:
@@ -101,8 +93,7 @@ def main(ip: str) -> None:
         print(f"Connect succeeded {ip}:{port}")
         connected = True
     except Exception:
-        print(
-            f"Error while trying to connect.  Check ip or port -- {ip}:{port}")
+        print(f"Error while trying to connect.  Check ip or port -- {ip}:{port}")
 
     while connected:
         from_user = menu()
@@ -112,9 +103,8 @@ def main(ip: str) -> None:
             print("Selection error try again")
             continue
         try:
-            handle_msg(sock,to_send, client_args)
+            handle_msg(sock, to_send, client_args)
         except DisconnectRequest as e:
-            # need to find a cleaner way to do this
             break
         except socket.error as err:
             if err.errno == 10053:  # win err 10053: connection was aborted

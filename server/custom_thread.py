@@ -2,7 +2,7 @@ import threading
 import time
 import socket
 import traceback
-from rsa_client import RsaClient
+#from rsa_client import RsaClient
 from tcp_by_size import recv_by_size, send_with_size
 from handlers import (
     handle_chuk,
@@ -118,8 +118,7 @@ class CustomThread(threading.Thread):
         # in this proto, the code is the client[:3] +"R", so can update this
         handler = request_handlers.get(request_code, handle_error)
 
-        functions_that_require_this = [
-            "CHUK", "FILE", "CLOS", "GETP", "GKEY", "ZFIL"]
+        functions_that_require_this = ["CHUK", "FILE", "CLOS", "GETP", "GKEY", "ZFIL"]
         if request_code in functions_that_require_this:
             response = handler(request[5:].decode(), self)
         else:

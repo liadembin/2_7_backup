@@ -32,8 +32,8 @@ def main():
     while True:
         print("\nMain thread: before accepting ...")
         cli_sock, addr = srv_sock.accept()
-        
-        #t = CustomThread(cli_sock, client, addr, tid, True)
+
+        # t = CustomThread(cli_sock, client, addr, tid, True)
         t = CustomThread(cli_sock, addr, tid, True)
         t.start()
         tid += 1
