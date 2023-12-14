@@ -1,4 +1,6 @@
 # 2.6  client server October 2021
+import os
+from PIL import Image
 from typing import List, Tuple
 from alive_progress import alive_bar
 import pickle
@@ -8,14 +10,15 @@ import sys
 import traceback
 from tcp_by_size import recv_by_size, send_with_size
 from client_custom_exceptions import DisconnectErr, DisconnectRequest
-
+import zlib
 # from __ import * ruins LSP.
 from client_handlers import (
     handle_dir,
     handle_exec,
     handle_recived_chunk,
+    # handle_recived_zipped_chunk,
     handle_get_unread,
-    handle_add_message
+    handle_add_message,
 )
 import logging
 
@@ -25,9 +28,11 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 logger.propagate = True
-SCREEN_SHOT_OUTPUT_DIR = "SCREEN_SHOTS_OUTS"
+SCREEN_SHOT_OUTPUT_DIR = "srcshot"
 FILE_MENU_LOCATION = "10"
 GET_CHUNK_CONST = "1001"
+GET_ZIPED_CHUNK_CONST = "10001"
+TAKE_SCREENSHOT = "9"
 USER_MENU_TO_CODE_DICT = {
     "1": "TIME",
     "2": "RAND",
@@ -37,13 +42,15 @@ USER_MENU_TO_CODE_DICT = {
     "6": "EXEC",
     "7": "COPY",
     "8": "DELL",
-    "9": "SCRS",
+    TAKE_SCREENSHOT: "SCRS",
     FILE_MENU_LOCATION: "FILE",
     GET_CHUNK_CONST: "CHUK",
     "11": "REGI",
     "12": "LOGI",
     "13": "GETM",
-    "14": "ADDM"
+    "14": "ADDM",
+    "15": "ZFIL",
+    GET_ZIPED_CHUNK_CONST: "ZHUK",
 }
 
 
@@ -56,6 +63,30 @@ def handle_file(fields, client_args):
             bar()
         # print("Finished writing the chunk")
     handle_msg("CLOS~" + file_name, [file_name])
+    return ""
+
+
+def decompress_file(input_file, output_file):
+    try:
+        with open(input_file, 'rb') as f_in:
+            compressed_data = f_in.read()
+            decompressed_data = zlib.decompress(compressed_data)
+        with open(output_file, 'wb') as f_out:
+            f_out.write(decompressed_data)
+    except Exception as e:
+        print("Failed to decomp")
+
+
+def handle_recived_zipped_file(fields, client_args):
+    code, chunk_amount, compress_file_name = fields
+    output_filename = client_args[0]
+    client_args[0] = client_args[0] + ".gz"
+    handle_msg(("FILE~" + compress_file_name).encode(), client_args)
+    # handle_file([code, chunk_amount, compress_file_name], client_args)
+    print("Now Decomping")
+    # print("Finished writing the chunk")
+    decompress_file(client_args[0], output_filename)
+    # os.remove(compress_file_name)
     return ""
 
 
@@ -75,10 +106,11 @@ def menu() -> Tuple[str, List[str], List[str]]:
         "delete a file",
         "screen shot",
         "fetch a file",
-        "Sign up for the chating service",
-        "Sign in to the chating service",
-        "Get unread messages",
-        "Send a message"
+        # "Sign up for the chating service",
+        # "Sign in to the chating service",
+        # "Get unread messages",
+        # "Send a message",
+        "copy(with commpression per chunk) a file"
     ]
 
     for index, option in enumerate(options, start=1):
@@ -90,12 +122,8 @@ def menu() -> Tuple[str, List[str], List[str]]:
 
     count_args = {
         "5": [
-            [
-                1,
-                [
-                    "Any Sub directory? (. for current, ../ OR ./ works. may also specify dir name like: .git )"
-                ],
-            ],
+            [1, [
+                "Any Sub directory? (. for current, ../ OR ./ works. may also specify dir name like: .git )"],],
             [0, []],
         ],
         "6": [[1, ["Program name / path to the .exe "]], [0, []]],
@@ -104,7 +132,7 @@ def menu() -> Tuple[str, List[str], List[str]]:
         "10": [[1, ["Remote file name"]], [1, ["local file name"]]],
         "11": [[2, ["Username? ", " Password?"]], [0, []]],
         "12": [[2, ["Username? ", " Password?"]], [0, []]],
-
+        "15": [[1, ["Remote file name"]], [1, ["local file name"]]],
     }
     row = count_args.get(request, [[0, [""]], [0, [""]]])
 
@@ -129,11 +157,16 @@ def protocol_build_request(from_user):
 
 
 def handle_screenshot(fileds, client_args):
+    out_name = input(" What name to give the screenshot? ")
+    # handle_msg(TAKE_SCREENSHOT, [])
     handle_msg(
         protocol_build_request(
-            [FILE_MENU_LOCATION, [f"./{SCREEN_SHOT_OUTPUT_DIR}" + fileds[-1]]]),
-        [input(" What name to give the screenshot? ")],
+            [FILE_MENU_LOCATION, [f"./{SCREEN_SHOT_OUTPUT_DIR}/" + fileds[-1]]]
+        ),
+        [out_name],
     )
+    img = Image.open(out_name)
+    img.show()
     return f"Server took a screenshot named {fileds[-1]} sucsessfuly"
 
 
@@ -170,11 +203,11 @@ def protocol_parse_reply(reply, client_args):
             "EXER": handle_exec,
             "FILR": handle_file,
             "CHUR": handle_recived_chunk,
+            "ZFIR": handle_recived_zipped_file,
             "REGR": handle_register_response,
             "SIGR": handle_signin_response,
             "GETM": handle_get_unread,
             "ADDM": handle_add_message,
-
         }
         if code in special_handlers.keys():
             return special_handlers[code](fields, client_args)
@@ -187,8 +220,9 @@ def protocol_parse_reply(reply, client_args):
             "EXTR": "Server Acknowleged the exit message ",
             "EXER": "Server Execution returrned: ",
             "SCTE": "Server screen shot err:",
-            "COPR": " Server copied good",
+            "COPR": " Server Copy result: ",
             "OKAY": "",
+            "DELR": "Server delete result: ",
         }
 
         to_show = to_show_dict.get(code, "Server sent an unknown code")
@@ -211,7 +245,7 @@ def handle_reply(reply, client_args):
 
     if to_show != "":
         print("\n==========================================================")
-        print(f"  SERVER Reply: {to_show}   |")
+        print(f"\t {to_show} \t")
         print("==========================================================")
 
 
@@ -256,7 +290,11 @@ def main(ip: str) -> None:
             # need to find a cleaner way to do this
             break
         except socket.error as err:
-            print(f"Got socket error: {err}")
+            if err.errno == 10053:  # win err 10053: connection was aborted
+                print("The server is now closed so cant connect to it")
+            else:
+                print(f"Got socket error: {err}")
+
             break
         except Exception as err:
             print(f"General error: {err}")

@@ -22,7 +22,8 @@ db_config = {
     "database": db_databasename,
 }
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
-    pool_name="mypool", pool_size=5, **db_config)
+    pool_name="mypool", pool_size=5, **db_config
+)
 
 
 def sign_up_to_db(username, password) -> ReturnDbType:
@@ -34,8 +35,10 @@ def sign_up_to_db(username, password) -> ReturnDbType:
         salt = generate_salt(64)
         sessid = generate_sessid(64)  # must check for collision to add later
         hashed = hash_password(password, salt)
-        cursor.execute("Insert into users (username,password,salt,sessid) values (%s,%s,%s,%s)",
-                       (username, hashed, salt, sessid))
+        cursor.execute(
+            "Insert into users (username,password,salt,sessid) values (%s,%s,%s,%s)",
+            (username, hashed, salt, sessid),
+        )
         rows = connection.commit()
         print("Rows: ")
         print(rows)
@@ -50,14 +53,16 @@ def sign_in_to_db(username, password) -> ReturnDbType:
         # Perform database operations using the connection and cursor
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT id,username,password,salt from users where username = %s", (username,))
+            "SELECT id,username,password,salt from users where username = %s",
+            (username,),
+        )
         rows = cursor.fetchone()
         print(rows)
         # now check the hashes and if yes then great
         hashed_password = hash_password(password, rows[3])
         if hashed_password != rows[2]:
             return "", [(f"Invalid Credentials", 111001)]
-        return f"{}", []
+        return f"rows: {rows =}", []
 
     except Exception as e:
         return "", [(f"General Error {e}", 11001)]
@@ -73,7 +78,7 @@ def get_received_messages_by_id(user_id):
         INNER JOIN messages ON messages.sender_id = users.id
         WHERE messages.receiver_id = %s AND messages.message_type = 'Received';
         """,
-        (user_id,)
+        (user_id,),
     )
     rows = cursor.fetchall()
     return rows
@@ -96,7 +101,7 @@ def get_sent_messages_by_id(id):
         INNER JOIN messages ON messages.sender_id = users.id
         WHERE messages.sender_id = id = %s AND messages.message_type = 'Received';
         """,
-        (id,)
+        (id,),
     )
     rows = cursor.fetchall()
     return rows
@@ -105,12 +110,15 @@ def get_sent_messages_by_id(id):
 def get_unread_messages_from_sessid(sessid):
     connection = connection_pool.get_connection()
     cursor = connection.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT messages.*, users.username as sender_username
         FROM messages
         INNER JOIN users ON messages.sender_id = users.id
         WHERE messages.message_type = 'Received' AND messages.receiver_sessid = %s;
-    """, (sessid,))
+    """,
+        (sessid,),
+    )
     rows = cursor.fetchall()
     return rows
 
@@ -129,11 +137,14 @@ def add_message(sessid, msg_content):
         # Inserting the message into the database
         cursor = connection.cursor()
         sending_time = datetime.datetime.now()
-        message_type = 'Sent'  # Assuming this is a sent message
-        cursor.execute("""
+        message_type = "Sent"  # Assuming this is a sent message
+        cursor.execute(
+            """
             INSERT INTO messages (sender_id, receiver_id, sendingtime, content, message_type)
             VALUES (%s, %s, %s, %s, %s)
-        """, (sender_id, 2, sending_time, msg_content, message_type))
+        """,
+            (sender_id, 2, sending_time, msg_content, message_type),
+        )
 
         connection.commit()
 

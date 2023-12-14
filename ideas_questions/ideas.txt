@@ -8,3 +8,9 @@ chat rooms
 Handle the possiblity of 2 threads creating the same img at once so same time 
 GZIP the files before and after sending 
 Status Bar for the file downloading  - done 
+
+
+
+Add more specific errors 
+add another cool thing 
+design protocol

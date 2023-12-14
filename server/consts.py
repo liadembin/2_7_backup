@@ -1,0 +1,1 @@
+SCREEN_SHOT_OUTPUT_DIR = "srcshot"

@@ -2,10 +2,12 @@ import threading
 import time
 import socket
 import traceback
+from rsa_client import RsaClient
 from tcp_by_size import recv_by_size, send_with_size
 from handlers import (
     handle_chuk,
     handle_close_file,
+    handle_get_zipped_file,
     handle_random,
     handle_error,
     handle_exit,
@@ -20,20 +22,30 @@ from handlers import (
     handle_register,
     handle_signin,
     handle_get_unread,
-    handle_add_message
+    handle_add_message,
+    handle_get_public_key,
+    handle_get_enc_key,
 )
 import os
-SCREEN_SHOT_OUTPUT_DIR = "SCREEN_SHOTS_OUTS"
+from consts import SCREEN_SHOT_OUTPUT_DIR
+import zlib
 
 
 class CustomThread(threading.Thread):
-    def __init__(self, cli_sock, addr, tid, tcp_debug=False):
+    def __init__(self, cli_sock, rsa_clien: RsaClient, addr, tid, tcp_debug=False):
         super(CustomThread, self).__init__()
         self.sock = cli_sock
         self.addr = addr
         self.tid = tid
         self.open_files = {}
         self.tcp_debug = tcp_debug
+        self.rsa_clien = rsa_clien
+        print("Encoded: ")
+        # print("Hello World".encode())
+        # print("From Bytes: ", int.from_bytes("Hello World".encode()))
+        # print(rsa_clien.encrypt(int.from_bytes(
+        #     "Hello World".encode()), rsa_clien.public_key))
+        print(rsa_clien.encrypt(0b01011000, rsa_clien.public_key))
         if not os.path.isdir(SCREEN_SHOT_OUTPUT_DIR):
             os.makedirs(SCREEN_SHOT_OUTPUT_DIR)
 
@@ -67,7 +79,6 @@ class CustomThread(threading.Thread):
                 if did_exit:
                     time.sleep(1)
                     break
-
             except socket.error as err:
                 print(f"socket Error exit client loop: err:  {err}")
                 break
@@ -100,18 +111,22 @@ class CustomThread(threading.Thread):
             "COPY": handle_copy,
             "SCRS": handle_screenshot,
             "FILE": handle_file,
+            "ZFIL": handle_get_zipped_file,
             "CHUK": handle_chuk,
             "CLOS": handle_close_file,
             "REGI": handle_register,
             "LOGI": handle_signin,
             "GETM": handle_get_unread,
             "ADDM": handle_add_message,
+            "GETP": handle_get_public_key,
+            "GKEY": handle_get_enc_key,
         }
         request_code = request[:4].decode()
         # in this proto, the code is the client[:3] +"R", so can update this
         handler = request_handlers.get(request_code, handle_error)
 
-        functions_that_require_this = ["CHUK", "FILE", "CLOS"]
+        functions_that_require_this = [
+            "CHUK", "FILE", "CLOS", "GETP", "GKEY", "ZFIL"]
         if request_code in functions_that_require_this:
             response = handler(request[5:].decode(), self)
         else:

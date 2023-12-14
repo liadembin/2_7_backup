@@ -1,19 +1,29 @@
-from db import get_received_messages_by_id, get_user_by_sessid, sign_in_to_db, sign_up_to_db, get_sent_messages_by_id, get_unread_messages_from_sessid
+import zlib
+from db import (
+    get_received_messages_by_id,
+    get_user_by_sessid,
+    sign_in_to_db,
+    sign_up_to_db,
+    get_sent_messages_by_id,
+    get_unread_messages_from_sessid,
+)
 import shutil
 import random
 import os
 import datetime
 import subprocess
-from typing import Tuple
+from typing import Optional, Tuple
 import pyautogui
 from PIL import Image
 import pickle
 import base64
 
-HANDLE_TYPE = Tuple[(str | bytearray), bool]
+from consts import SCREEN_SHOT_OUTPUT_DIR
+
+HANDLE_TYPE = Tuple[(str | bytearray), Optional[bool]]
 
 
-def handle_error(args: str):
+def handle_error(args: str) -> HANDLE_TYPE:
     return "ERRR~002~code not supported", True
 
 
@@ -61,13 +71,13 @@ def traverse(path="."):
     return sub_func(path)
 
 
-def base64_from_pickle(bytearr):
+def to_base64_and_pickled(bytearr):
     try:
         # Deserialize the pickled data
-        data = pickle.loads(bytearr)
+        data = pickle.dumps(bytearr)
 
         # Convert the pickled data to Base64
-        base64_data = base64.b64encode(bytearr).decode("utf-8")
+        base64_data = base64.b64encode(data).decode("utf-8")
 
         return base64_data
     except Exception as e:
@@ -79,7 +89,7 @@ def base64_from_pickle(bytearr):
 def handle_dir(args: str) -> HANDLE_TYPE:
     # params = args.split("~")[1:]
     data = traverse(args)  # params[0])
-    return "DIRR~" + base64_from_pickle(pickle.dumps(data)), False
+    return "DIRR~" + to_base64_and_pickled(data), False
 
 
 def handle_del(args: str) -> HANDLE_TYPE:
@@ -107,24 +117,30 @@ def handle_copy(args: str) -> HANDLE_TYPE:
     src, dest = args_stringifyed.split("~")
     print(f"{src = } { dest =}")
     shutil.copyfile(src, dest)
-    return "COPR~Copy good", True
+    return "COPR~copy was succsessfull", True
     # pass
 
 
 def handle_screenshot(args: str) -> HANDLE_TYPE:
+    print("Client want a srchshot")
     filename = args
     if args == "" or args == b"":
         filename = (
-            datetime.datetime.now().isoformat().replace(":", "_") + "_screenshot.png"
+            datetime.datetime.now().isoformat().replace(":", "_").replace(".", "_")
+            + "_screenshot.png"
         )
     try:
         print(f"Saving {filename =}")
-        pyautogui.screenshot("./srcshot/" + filename)
+        # if not os.path.exists('srcshot'):
+        #     print("Couldnt find the directory")
+        #     os.mkdir("srcshot")
+        pyautogui.screenshot(f"./{SCREEN_SHOT_OUTPUT_DIR}/" + filename)
+        print("Saved ")
         return "SCTR~" + filename, True
     except Exception as e:
+        print("Weird errror")
         print(e)
         return "SCTE~0100~" + "Cant save the screenshot", True
-    pass
 
 
 def get_file_size(file_path: str) -> int:
@@ -146,12 +162,43 @@ def handle_file(args: str, thread) -> HANDLE_TYPE:
     # then send a final message
 
     file_name = args
+    chunk_amount = get_chunk_amount(file_name)
+    thread.open_files[file_name] = open(file_name, "rb")
+    return "FILR~" + str(chunk_amount) + "~" + file_name, True
+
+
+def get_chunk_amount(file_name):
+
     file_size = get_file_size(file_name)
     chunk_amount = file_size // SEND_SIZE + 1
     if file_size % SEND_SIZE == 0 and file_size > SEND_SIZE:
         chunk_amount -= 1  # no partial is needed
-    thread.open_files[file_name] = open(file_name, "rb")
-    return "FILR~" + str(chunk_amount) + "~" + file_name, True
+    return chunk_amount
+
+
+def zlib_compress_file(input_filename, output_filename):
+    with open(input_filename, 'rb') as f_in:
+        data = f_in.read()
+        compressed_data = zlib.compress(data)
+    with open(output_filename, 'wb') as f_out:
+        f_out.write(compressed_data)
+
+
+def handle_get_zipped_file(args: str, thread) -> HANDLE_TYPE:
+    #
+    # file_name = args
+    # file_size = get_file_size(file_name)
+    # chunk_amount = file_size // SEND_SIZE + 1
+    # if file_size % SEND_SIZE == 0 and file_size > SEND_SIZE:
+    #     chunk_amount -= 1  # no partial is needed
+    # thread.open_files[file_name] = open(file_name, "rb")
+    # return "ZIFR~" + str(chunk_amount) + "~" + file_name, True
+    # gzip the file
+    # return ZFIR which just activates the client file handler then unzips
+    compres_name = args + '.gz'
+    zlib_compress_file(args, compres_name)
+    thread.open_files[compres_name] = open(compres_name, "rb")
+    return f"ZFIR~{get_chunk_amount(compres_name)}~{compres_name}", True
 
 
 def handle_chuk(args: str, thread):
@@ -214,7 +261,7 @@ def handle_get_inbox(args: str):
     if user is None:
         return "INBE~Invalid Session Token~1001", True
     inbox = get_received_messages_by_id(user)[0]
-    encoded = base64_from_pickle(pickle.dumps(inbox))
+    encoded = to_base64_and_pickled(inbox)
     return "BOXR~" + encoded, True
 
 
@@ -224,20 +271,29 @@ def handle_get_outbox(args: str):
     if user is None:
         return "OUTE~Invalid Session Token~1001", True
     inbox = get_sent_messages_by_id(user)[0]
-    encoded = base64_from_pickle(pickle.dumps(inbox))
+    encoded = to_base64_and_pickled(inbox)
     return "OUTR~" + encoded, True
 
 
 def handle_get_unread(args):
     messages = get_unread_messages_from_sessid(args.split("~")[0])
     # Add rsa encoding
-    encoded = base64_from_pickle(pickle.dumps(messages))
+    encoded = to_base64_and_pickled(messages)
     return "UNRR~" + encoded, True
 
 
 def handle_add_message(args):
     sessid, msg = args.split("~")
-    succsess, error = add_message(sessid, msg)
+    # succsess, error = add_message(sessid, msg)
+    succsess, error = "", ""
     if error:
-        return "ADME~"+error
+        return "ADME~" + error
     return "ADMR~" + succsess
+
+
+def handle_get_public_key(args, thread):
+    return "KEYR~" + thread.rsa_clien.public_key.n + "~" + thread.rsa_clien.public_key.e
+
+
+def handle_get_enc_key(args, thread):
+    pass

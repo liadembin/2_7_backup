@@ -1,6 +1,7 @@
 # from client import handle_msg
 import base64
 import pickle
+import zlib
 
 
 def decode_from_pickle_and_from_base64(base):
@@ -58,11 +59,11 @@ def handle_exec(fileds, client_args):
 
 
 def handle_recived_chunk(fields, client_args):
-    # print("Writing to: ")
+    # print("writing to: ")
     # print(client_args)
     code, remote_file_name, b64content = fields
     decoded_to_bin = base64.b64decode(b64content)
-    # out_filename = input("Enter the filename to save here ")
+    # out_filename = input("enter the filename to save here ")
     with open(client_args[0], "ab+") as f:
         f.write(decoded_to_bin)
     return ""
