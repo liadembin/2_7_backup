@@ -1,4 +1,3 @@
-
 import base64
 import pickle
 import zlib
@@ -50,13 +49,13 @@ def handle_file(fields, client_args):
     with alive_bar(int(chunk_amount), bar="blocks", spinner="wait") as bar:
         for i in range(int(chunk_amount)):
             # print(f"Chunk: {i}")
-            
-            #req_str = ("CHUK~" + file_name).encode()
-            req_str=  join_code_params("CHUK",file_name)#protocol_build_request()
+
+            # req_str = ("CHUK~" + file_name).encode()
+            req_str = join_code_params("CHUK", file_name)  # protocol_build_request()
             handle_msg(to_send=req_str, client_args=client_args)
             bar()
         # print("Finished writing the chunk")
-    close_str=  join_code_params("CLOS",file_name)
+    close_str = join_code_params("CLOS", file_name)
     handle_msg(to_send=close_str, client_args=[file_name])
     return ""
 
@@ -76,7 +75,7 @@ def handle_recived_zipped_file(fields, client_args):
     code, chunk_amount, compress_file_name = fields
     output_filename = client_args[0]
     client_args[0] = client_args[0] + ".gz"
-    send_str = join_code_params("FILE",compress_file_name)
+    send_str = join_code_params("FILE", compress_file_name)
     handle_msg(to_send=send_str, client_args=client_args)
     # handle_file([code, chunk_amount, compress_file_name], client_args)
     print("Now Decomping")
@@ -138,17 +137,23 @@ def handle_recived_chunk(fields, client_args):
     with open(client_args[0], "ab+") as f:
         f.write(decoded_to_bin)
     return ""
+
+
 def get_sock(sock):
     global sock_save
     if sock == None:
-        #sock = sock_save
+        # sock = sock_save
         return sock_save
     else:
         sock_save = sock
-        return sock 
+        return sock
+
+
 def handle_msg(sock=None, to_send="", client_args=[]):
     # send_with_size(sock,to_send,"",True)
-    soc = get_sock(sock) # first time, its called from main. it is provided a socket and will save it 
+    soc = get_sock(
+        sock
+    )  # first time, its called from main. it is provided a socket and will save it
     # second time or when called from handlers it will returned the saved socket
 
     send_with_size(soc, to_send)
@@ -176,7 +181,9 @@ def handle_reply(reply, client_args):
 def handle_screenshot(fields, client_args):
     out_name = input("What name to give the screenshot? ")
     remote_filename = f"./{SCREEN_SHOT_OUTPUT_DIR}/" + fields[-1]
-    send_str = join_code_params(USER_MENU_TO_CODE_DICT[FILE_MENU_LOCATION], remote_filename)
+    send_str = join_code_params(
+        USER_MENU_TO_CODE_DICT[FILE_MENU_LOCATION], remote_filename
+    )
     handle_msg(to_send=send_str, client_args=[out_name])
     img = Image.open(out_name)
     img.show()
@@ -254,12 +261,13 @@ def protocol_build_request(from_user):
     print("From User: ")
     print(from_user)
     ret_str = join_code_params(
-        USER_MENU_TO_CODE_DICT.get(from_user[0], ""),
-        *from_user[1]
+        USER_MENU_TO_CODE_DICT.get(from_user[0], ""), *from_user[1]
     )
     print("Ret Str: ")
     print(ret_str)
     return ret_str
+
+
 def join_code_params(code, *params):
     built_str = code
 
