@@ -1,0 +1,2 @@
+path/to/lorem_big.txt filter=lfs diff=lfs merge=lfs -text
+*/lorem_big.txt filter=lfs diff=lfs merge=lfs -text

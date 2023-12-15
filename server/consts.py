@@ -1,0 +1,2 @@
+SCREEN_SHOT_OUTPUT_DIR = "screenshot_dir"
+SEND_SIZE = 1024 * 16

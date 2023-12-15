@@ -1,0 +1,7 @@
+__pycache__
+*.docx
+srcshot
+*.mp4
+copied
+./server/files_to_test_copy/lorem_big.txt
+*lorem_big.txt

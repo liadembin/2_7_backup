@@ -1,0 +1,16 @@
+RSA - sort of. 
+the server has a key pair 
+when the client want to send a message encryptd 
+it asks the server to recive a public key 
+# then encrypts a symetric key to talk with 
+use sha1/md5 to checksum the files to make sure we good 
+chat rooms 
+Handle the possiblity of 2 threads creating the same img at once so same time 
+GZIP the files before and after sending 
+Status Bar for the file downloading  - done 
+
+
+
+Add more specific errors 
+add another cool thing 
+design protocol
